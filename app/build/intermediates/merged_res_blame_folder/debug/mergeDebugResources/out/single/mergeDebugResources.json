@@ -120,10 +120,6 @@
         "source": "com.blesense.app-main-89:/drawable/racing_bg7.png"
     },
     {
-        "merged": "com.blesense.app-debug-87:/layout_item_payload.xml.flat",
-        "source": "com.blesense.app-main-89:/layout/item_payload.xml"
-    },
-    {
         "merged": "com.blesense.app-debug-87:/drawable_ic_launcher_background.xml.flat",
         "source": "com.blesense.app-main-89:/drawable/ic_launcher_background.xml"
     },
@@ -268,10 +264,6 @@
         "source": "com.blesense.app-main-89:/font/helvetica_bold.ttf"
     },
     {
-        "merged": "com.blesense.app-debug-87:/layout_activity_data_logger.xml.flat",
-        "source": "com.blesense.app-main-89:/layout/activity_data_logger.xml"
-    },
-    {
         "merged": "com.blesense.app-debug-87:/drawable_ic_accelerometer.png.flat",
         "source": "com.blesense.app-main-89:/drawable/ic_accelerometer.png"
     },
@@ -304,12 +296,12 @@
         "source": "com.blesense.app-main-89:/raw/yayy.mp3"
     },
     {
-        "merged": "com.blesense.app-debug-87:/drawable_icons_leaf.png.flat",
-        "source": "com.blesense.app-main-89:/drawable/icons_leaf.png"
-    },
-    {
         "merged": "com.blesense.app-debug-87:/drawable_ic_pressure_sensor.png.flat",
         "source": "com.blesense.app-main-89:/drawable/ic_pressure_sensor.png"
+    },
+    {
+        "merged": "com.blesense.app-debug-87:/drawable_icons_leaf.png.flat",
+        "source": "com.blesense.app-main-89:/drawable/icons_leaf.png"
     },
     {
         "merged": "com.blesense.app-debug-87:/drawable_soundon.png.flat",

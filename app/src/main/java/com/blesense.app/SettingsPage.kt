@@ -3,8 +3,6 @@ package com.blesense.app
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,6 +33,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.blesense.app.Presentation.helveticaFont
+import com.blesense.app.core.di.AuthModule.getCurrentUserUseCase
+import com.blesense.app.features.auth.domain.model.User
+import com.blesense.app.features.auth.presentation.viewmodel.AuthState
+import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
+import com.blesense.app.viewmodel.AuthViewModel
+import com.blesense.app.viewmodel.UserData
+import com.blesense.app.viewmodel.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.random.Random
@@ -60,49 +66,60 @@ object ThemeManager {
 }
 
 // Main settings screen composable
+package com.blesense.app.features.settings.presentation
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import com.blesense.app.features.auth.presentation.viewmodel.AuthState
+import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModernSettingsScreen(
     viewModel: AuthViewModel = viewModel(),
     onSignOut: () -> Unit,
     navController: NavHostController
 ) {
-    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+    // 1. Extract the current user from the AuthState at the top level
+    val authState by viewModel.authState.collectAsState()
+    val currentUser = (authState as? AuthState.Success)?.user
 
-    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF2F2F7)
-    val cardBackground = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val textColor = if (isDarkMode) Color.White else Color.Black
-    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray
-    val dividerColor = if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFFE0E0E0)
-    val iconTint = if (isDarkMode) Color(0xFF64B5F6) else Color(0xFF007AFF)
-
-    val currentUser = viewModel.checkCurrentUser()
+    // 2. Use MaterialTheme.colorScheme for automatic Dark/Light switching
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val textColor = MaterialTheme.colorScheme.onBackground
+    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val cardBackground = MaterialTheme.colorScheme.surfaceVariant
 
     Scaffold(
-        modifier = Modifier.systemBarsPadding(),
-        backgroundColor = backgroundColor,
+        modifier = Modifier.fillMaxSize(),
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "Settings",
-                        fontFamily = helveticaFont,
-                        style = MaterialTheme.typography.h5.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigate("intermediate_screen") }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = textColor
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back"
                         )
                     }
                 },
-                backgroundColor = backgroundColor,
-                elevation = 0.dp
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
             )
         }
     ) { padding ->
@@ -114,12 +131,12 @@ fun ModernSettingsScreen(
         ) {
             val context = LocalContext.current
 
-            // User profile card
+            // 3. User profile card with safe null handling
             UserProfileCard(
                 cardBackground = cardBackground,
                 textColor = textColor,
                 secondaryTextColor = secondaryTextColor,
-                iconTint = iconTint,
+                iconTint = MaterialTheme.colorScheme.primary,
                 userName = when {
                     currentUser?.isAnonymous == true -> "Guest User"
                     currentUser != null -> currentUser.email?.substringBefore('@') ?: "User"
@@ -132,10 +149,18 @@ fun ModernSettingsScreen(
                 },
                 profilePictureUrl = currentUser?.photoUrl?.toString(),
                 onLogout = {
-                    viewModel.signOut(context)
+                    viewModel.logout() // Using the logout method from your AuthViewModel
                     onSignOut()
                 }
             )
+
+            // Handle Loading or Error states overlaying the UI if necessary
+            if (authState is AuthState.Loading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
 
             Spacer(modifier = Modifier.height(20.dp))
 

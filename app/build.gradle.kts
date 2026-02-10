@@ -112,6 +112,7 @@ dependencies {
     // ==================== LIFECYCLE ====================
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    implementation(libs.material3)
 
     // ==================== TESTING ====================
     testImplementation(libs.junit)

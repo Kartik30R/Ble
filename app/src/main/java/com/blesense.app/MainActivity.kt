@@ -10,6 +10,8 @@ import androidx.annotation.RequiresApi
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
+import com.blesense.app.app.AppNavigation
+import com.blesense.app.coreui.theme.BleSenseTheme
 import com.google.firebase.Firebase
 import com.google.firebase.initialize
 
@@ -33,11 +35,12 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         // Set the Compose UI content
         setContent {
-            AdjustStatusBarIconsForTheme()
-            // Create a NavController for navigation
-            val navController = rememberNavController()
-            // Set up the app's navigation graph
-            AppNavigation(navController)
+            BleSenseTheme {
+                AdjustStatusBarIconsForTheme()
+                val navController = rememberNavController()
+                AppNavigation(navController)
+            }
         }
+
     }
 }

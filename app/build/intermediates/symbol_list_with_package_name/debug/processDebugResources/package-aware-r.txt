@@ -3237,7 +3237,6 @@ id disableHome
 id disablePostScroll
 id disableScroll
 id disjoint
-id download_button
 id dragDown
 id dragEnd
 id dragLeft
@@ -3406,18 +3405,6 @@ id parent_matrix
 id password_toggle
 id path
 id pathRelative
-id payloadAirPressureTextView
-id payloadCounter1TextView
-id payloadCounter2TextView
-id payloadHumidityTextView
-id payloadRadiationTextView
-id payloadRainTextView
-id payloadRecyclerView
-id payloadTemperatureTextView
-id payloadTimestampTextView
-id payloadVisibilityTextView
-id payloadWindDirectionTextView
-id payloadWindSpeedTextView
 id peekHeight
 id percent
 id pin
@@ -3429,7 +3416,6 @@ id progress_circular
 id progress_horizontal
 id radio
 id ratio
-id rawDataTextView
 id rectangles
 id report_drawn
 id reverseSawtooth
@@ -3443,7 +3429,6 @@ id save_non_transition_alpha
 id save_overlay_view
 id sawtooth
 id scale
-id scan_button
 id screen
 id scroll
 id scrollIndicatorDown
@@ -3506,7 +3491,6 @@ id startToEnd
 id startVertical
 id staticLayout
 id staticPostLayout
-id statusTextView
 id stop
 id stretch
 id submenuarrow
@@ -3691,7 +3675,6 @@ layout abc_search_dropdown_item_icons_2line
 layout abc_search_view
 layout abc_select_dialog_material
 layout abc_tooltip
-layout activity_data_logger
 layout browser_actions_context_menu_page
 layout browser_actions_context_menu_row
 layout custom_dialog
@@ -3712,7 +3695,6 @@ layout design_text_input_end_icon
 layout design_text_input_start_icon
 layout ime_base_split_test_activity
 layout ime_secondary_split_test_activity
-layout item_payload
 layout m3_alert_dialog
 layout m3_alert_dialog_actions
 layout m3_alert_dialog_title

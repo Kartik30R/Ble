@@ -23,6 +23,7 @@
 //import androidx.compose.ui.graphics.Brush
 //import androidx.compose.ui.graphics.Color
 //import androidx.compose.ui.graphics.PathEffect
+//import androidx.compose.ui.graphics.drawscope.DrawScope
 //import androidx.compose.ui.graphics.nativeCanvas
 //import androidx.compose.ui.platform.LocalContext
 //import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +32,8 @@
 //import androidx.compose.ui.unit.sp
 //import androidx.lifecycle.viewmodel.compose.viewModel
 //import androidx.navigation.NavController
-//import com.blesense.app.Presentation.helveticaFont
+//import com.blesense.app.coreui.theme.ThemeManager
+//import com.blesense.app.features.bluetooth.presentation.viewmodel.BluetoothScanViewModelFactory
 //import kotlinx.coroutines.flow.map
 //import presentation.viewmodel.BluetoothScanViewModel
 //import java.text.SimpleDateFormat

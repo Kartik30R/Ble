@@ -1,7 +1,6 @@
 package com.blesense.app
 
-import AdjustStatusBarIconsForTheme
-import android.content.pm.ActivityInfo
+ import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -36,8 +35,7 @@ class MainActivity : ComponentActivity() {
         // Set the Compose UI content
         setContent {
             BleSenseTheme {
-                AdjustStatusBarIconsForTheme()
-                val navController = rememberNavController()
+                 val navController = rememberNavController()
                 AppNavigation(navController)
             }
         }

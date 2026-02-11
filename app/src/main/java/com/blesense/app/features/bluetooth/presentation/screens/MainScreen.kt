@@ -1,68 +1,110 @@
 package com.blesense.app.Presentation
 
 import android.bluetooth.BluetoothAdapter
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.res.Configuration
+import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.background
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.* // Using Material 3
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
- import com.blesense.app.ThemeManager
-import com.blesense.app.coreui.constants.AppStrings
+
+import com.blesense.app.core.permission.BluetoothPermissionManager
+import com.blesense.app.core.permission.BluetoothPermissionState
+ import com.blesense.app.coreui.theme.ThemeManager
 import com.blesense.app.features.bluetooth.presentation.widget.BluetoothDeviceItem
 import presentation.viewmodel.BluetoothScanViewModel
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     navController: NavHostController,
     bluetoothViewModel: BluetoothScanViewModel
 ) {
-    val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val activity = context as ComponentActivity
 
-    // 1. Collect state from New ViewModel
+    // UI State
     val bluetoothDevices by bluetoothViewModel.devices.collectAsState()
     val isScanning by bluetoothViewModel.isScanning.collectAsState()
     val isDarkMode by ThemeManager.isDarkMode.collectAsState()
 
-    // 2. State for UI Logic
     var expanded by remember { mutableStateOf(false) }
     var showAllDevices by remember { mutableStateOf(false) }
     val sensorTypes = listOf("SHT40", "LIS2DH", "Lux Sensor", "Soil Sensor", "DataLogger", "TempLogger")
     var selectedSensor by remember { mutableStateOf(sensorTypes[0]) }
 
-    // Bluetooth setup
-    val bluetoothAdapter = remember { BluetoothAdapter.getDefaultAdapter() }
+    /* ------------------------------------------------ */
+    /* Permission Manager Setup (Launchers First)       */
+    /* ------------------------------------------------ */
 
-    // 3. Lifecycle: Automatic Scanning
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        // Use a local check or the manager if already initialized
+        val granted = result.values.all { it }
+        // We trigger startScan via the Manager logic
+    }
+
+    val bluetoothLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { /* Handled by manager state observer */ }
+
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { /* Handled by manager state observer */ }
+
+    // Initialize the manager with the launchers
+    val permissionManager = remember {
+        BluetoothPermissionManager(
+            activity = activity,
+            permissionLauncher = permissionLauncher,
+            bluetoothLauncher = bluetoothLauncher,
+            locationLauncher = locationLauncher
+        )
+    }
+
+    val permissionState by permissionManager.state.collectAsState()
+
+    /* ------------------------------------------------ */
+    /* Lifecycle: Automatic Scan Reactivity             */
+    /* ------------------------------------------------ */
+
+    // This Effect runs whenever the permission/hardware state changes
+    LaunchedEffect(permissionState) {
+        Log.d("BLE_APP", "Current State: $permissionState")
+        if (permissionState == BluetoothPermissionState.Ready) {
+            bluetoothViewModel.startScan(activity)
+        } else if (permissionState == BluetoothPermissionState.Idle) {
+            // First run or reset: ensure everything is ready
+            permissionManager.ensureReady {
+                bluetoothViewModel.startScan(activity)
+            }
+        }
+    }
+
+    // Ensure we stop scanning when leaving this screen
     DisposableEffect(Unit) {
-        bluetoothViewModel.startScan(activity)
         onDispose { bluetoothViewModel.stopScan() }
     }
 
+    /* ------------------------------------------------ */
+    /* UI Layout                                        */
+    /* ------------------------------------------------ */
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background, // Central Theme Background
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -71,7 +113,7 @@ fun MainScreen(
                 ),
                 title = {
                     Text(
-                        text = AppStrings.APP_NAME,
+                        text = "BLE Sense",
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleLarge
                     )
@@ -93,24 +135,30 @@ fun MainScreen(
             )
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
+
+            // Error/Status Banner
+            PermissionStatusBanner(permissionState, permissionManager, activity, bluetoothViewModel)
+
             LazyColumn(modifier = Modifier.weight(1f)) {
                 item {
-                    // Main Container Card
                     ElevatedCard(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
                         shape = MaterialTheme.shapes.large,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            // Header Row
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -121,8 +169,13 @@ fun MainScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
+
                                 Row {
-                                    IconButton(onClick = { bluetoothViewModel.startScan(activity) }) {
+                                    IconButton(onClick = {
+                                        permissionManager.ensureReady {
+                                            bluetoothViewModel.startScan(activity)
+                                        }
+                                    }) {
                                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                                     }
 
@@ -130,6 +183,7 @@ fun MainScreen(
                                         IconButton(onClick = { expanded = true }) {
                                             Icon(Icons.Default.MoreVert, contentDescription = "Filter")
                                         }
+
                                         DropdownMenu(
                                             expanded = expanded,
                                             onDismissRequest = { expanded = false }
@@ -150,7 +204,6 @@ fun MainScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // 4. Reactive UI Content
                             if (bluetoothDevices.isEmpty()) {
                                 EmptyStateView(isScanning)
                             } else {
@@ -163,6 +216,7 @@ fun MainScreen(
                                         selectedSensor = selectedSensor,
                                         isDarkMode = isDarkMode
                                     )
+
                                     HorizontalDivider(
                                         modifier = Modifier.padding(vertical = 8.dp),
                                         color = MaterialTheme.colorScheme.outlineVariant
@@ -170,7 +224,9 @@ fun MainScreen(
                                 }
 
                                 if (bluetoothDevices.size > 4) {
-                                    ShowMoreToggle(showAllDevices) { showAllDevices = !showAllDevices }
+                                    ShowMoreToggle(showAllDevices) {
+                                        showAllDevices = !showAllDevices
+                                    }
                                 }
                             }
                         }
@@ -181,6 +237,46 @@ fun MainScreen(
     }
 }
 
+@Composable
+fun PermissionStatusBanner(
+    state: BluetoothPermissionState,
+    manager: BluetoothPermissionManager,
+    activity: ComponentActivity,
+    viewModel: BluetoothScanViewModel
+) {
+    if (state == BluetoothPermissionState.Ready) return
+
+    val message = when (state) {
+        BluetoothPermissionState.PermissionDenied -> "Bluetooth permissions are required to scan."
+        BluetoothPermissionState.BluetoothDisabled -> "Bluetooth is turned off."
+        BluetoothPermissionState.LocationDisabled -> "Location services are required for BLE discovery."
+        else -> null
+    }
+
+    message?.let {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = it,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                TextButton(onClick = {
+                    manager.ensureReady { viewModel.startScan(activity) }
+                }) {
+                    Text("FIX")
+                }
+            }
+        }
+    }
+}
 @Composable
 fun EmptyStateView(isScanning: Boolean) {
     Column(

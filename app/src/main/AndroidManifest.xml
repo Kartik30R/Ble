@@ -55,7 +55,7 @@
         </activity>
 
         <activity
-            android:name=".RobotControlCompose"
+            android:name=".features.remote.RobotControlCompose"
             android:exported="false"
             android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize"

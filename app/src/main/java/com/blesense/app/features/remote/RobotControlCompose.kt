@@ -1,5 +1,6 @@
 @file:Suppress("DEPRECATION", "UseCompatLoadingForDrawables")
-package com.blesense.app
+
+package com.blesense.app.features.remote
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -102,6 +103,9 @@ import java.util.UUID
 import kotlin.random.Random
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.blesense.app.R
+
+import com.blesense.app.coreui.theme.ThemeManager
 
 // Enum to represent Bluetooth scanning states
 enum class ScanState {

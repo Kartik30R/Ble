@@ -5,6 +5,7 @@ package com.blesense.app
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,14 +20,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import com.blesense.app.core.common.google.GoogleSignInHelper
  import com.blesense.app.features.auth.presentation.viewmodel.AuthState
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
@@ -213,25 +215,43 @@ fun LoginScreen(
 // ---------------- Helpers ----------------
 @Composable
 fun SocialLoginButton(
-    icon: Int,
+    @DrawableRes icon: Int,
     onClick: () -> Unit,
     backgroundColor: Color,
     borderColor: Color
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.size(64.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = backgroundColor),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = backgroundColor
+        ),
         border = BorderStroke(1.dp, borderColor),
-        contentPadding = PaddingValues(12.dp)
+        contentPadding = PaddingValues(0.dp)
     ) {
-        Icon(
-            painter = painterResource(id = icon),
-            contentDescription = null,
-            modifier = Modifier.size(32.dp),
-            tint = Color.Unspecified
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                painter = painterResource(id = icon),
+                contentDescription = "Google Login",
+                modifier = Modifier.size(24.dp),
+                tint = Color.Unspecified // Important: Keeps the Google "G" original colors
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Google",
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (backgroundColor == Color.White) Color.Black else Color.White
+                )
+            )
+        }
     }
 }
 
@@ -294,10 +314,12 @@ private fun PasswordTextField(
                 )
             }
         },
-        colors = TextFieldDefaults.textFieldColors(
-            containerColor = colors.surface,
-            unfocusedIndicatorColor = colors.outline,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = colors.surface,
+            unfocusedContainerColor = colors.surface,
+            disabledContainerColor = colors.surface,
             focusedIndicatorColor = colors.primary,
+            unfocusedIndicatorColor = colors.outline,
             errorIndicatorColor = colors.error,
             focusedTextColor = colors.onSurface,
             unfocusedTextColor = colors.onSurface
@@ -344,10 +366,12 @@ private fun EmailTextField(
                 )
             }
         },
-        colors = TextFieldDefaults.textFieldColors(
-            containerColor = colors.surface,
-            unfocusedIndicatorColor = colors.outline,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = colors.surface,
+            unfocusedContainerColor = colors.surface,
+            disabledContainerColor = colors.surface,
             focusedIndicatorColor = colors.primary,
+            unfocusedIndicatorColor = colors.outline,
             errorIndicatorColor = colors.error,
             focusedTextColor = colors.onSurface,
             unfocusedTextColor = colors.onSurface

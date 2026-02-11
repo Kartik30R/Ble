@@ -75,7 +75,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.blesense.app.RobotControlCompose"
+            android:name="com.blesense.app.features.remote.RobotControlCompose"
             android:configChanges="orientation|screenSize"
             android:exported="false"
             android:screenOrientation="landscape" />
@@ -84,7 +84,8 @@
             android:exported="true" />
         <activity
             android:name="androidx.activity.ComponentActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
         <service
             android:name="com.google.firebase.components.ComponentDiscoveryService"

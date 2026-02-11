@@ -18,8 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blesense.app.core.ui.helveticaFont
-import com.blesense.app.coreui.constants.AppStrings
+ import com.blesense.app.coreui.constants.AppStrings
+import com.blesense.app.coreui.theme.ThemeManager
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 
@@ -99,8 +99,7 @@ fun SplashScreen(
                     color = textColor,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    fontFamily = helveticaFont
-                ),
+                 ),
                 modifier = Modifier.graphicsLayer(
                     scaleX = titleScale,
                     scaleY = titleScale

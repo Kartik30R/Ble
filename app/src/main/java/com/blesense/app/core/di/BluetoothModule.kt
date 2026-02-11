@@ -33,38 +33,20 @@ object BluetoothModule {
             history = historyStore()
         )
 
-    /* -------------------- USE CASES -------------------- */
 
-    private fun startBleScanUseCase() =
-        StartBleScanUseCase(repository())
-
-    private fun stopBleScanUseCase() =
-        StopBleScanUseCase(repository())
-
-    private fun observeDevicesUseCase() =
-        ObserveDevicesUseCase(repository())
-
-    private fun observeLatestPacketIdUseCase() =
-         ObserveLatestPacketIdUseCase(repository())
-
-    private fun observeTempLoggerHistoryUseCase() =
-         ObserveTempLoggerHistoryUseCase(repository())
-    private fun clearDevicesUseCase() =
-        ClearDevicesUseCase(repository())
-
-    private fun getDeviceHistoryUseCase() =
-         GetDeviceHistoryUseCase(repository())
-
-    /* -------------------- VIEWMODEL FACTORY -------------------- */
-
-    fun bluetoothScanViewModelFactory(): BluetoothScanViewModelFactory =
-      BluetoothScanViewModelFactory(
-            startBleScan = startBleScanUseCase(),
-            stopBleScan = stopBleScanUseCase(),
-            observeDevices = observeDevicesUseCase(),
-            observeLatestPacketId = observeLatestPacketIdUseCase(),
-            observeTempLoggerHistory = observeTempLoggerHistoryUseCase(),
-          clearDevices = clearDevicesUseCase(),
-            getDeviceHistory = getDeviceHistoryUseCase()
+    fun bluetoothScanViewModelFactory(): BluetoothScanViewModelFactory {
+        return BluetoothScanViewModelFactory(
+            startBleScan = StartBleScanUseCase(repository()),
+            stopBleScan = StopBleScanUseCase(repository()),
+            observeScanningStatus = ObserveScanningStateUseCase(repository()),
+            observeDevices = ObserveDevicesUseCase(repository()),
+            clearDevices = ClearDevicesUseCase(repository()),
+            observeLatestPacketId = ObserveLatestPacketIdUseCase(repository()),
+            observeDataLoggerHistory = ObserveDataLoggerHistoryUseCase(repository()),
+            observeTempLoggerHistory = ObserveTempLoggerHistoryUseCase(repository()),
+            observeLatestTempLogger = ObserveLatestTempLoggerUseCase(repository()),
+            addSensorPacket = AddSensorPacketUseCase(repository()),
+             getDeviceHistory = GetDeviceHistoryUseCase(repository()) // Pass this here
         )
+    }
 }

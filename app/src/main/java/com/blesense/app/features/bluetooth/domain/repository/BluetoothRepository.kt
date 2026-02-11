@@ -16,5 +16,12 @@ interface BluetoothRepository {
     fun clearDevices()
 
     fun observeScanningState(): Flow<Boolean>
+    fun observeDataLoggerHistory(): Flow<List<SensorData.DataLoggerData>>
+    fun observeTempLoggerHistory(): Flow<Map<String, List<SensorData.TempLoggerData>>>
+    fun observeLatestTempLogger(): Flow<Map<String, SensorData.TempLoggerData?>>
+
+    // Actions
+    suspend fun addDataLoggerPacket(packet: SensorData.DataLoggerData)
+    suspend fun addTempLoggerPacket(deviceAddress: String, packet: SensorData.TempLoggerData)
 
  }

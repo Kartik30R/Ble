@@ -9,7 +9,6 @@ import com.blesense.app.features.bluetooth.domain.model.BleDevice
 import com.blesense.app.features.bluetooth.domain.model.HistoricalDataEntry
 import com.blesense.app.features.bluetooth.domain.model.SensorData
 import com.blesense.app.features.bluetooth.domain.repository.BluetoothRepository
-
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -20,20 +19,36 @@ class BluetoothRepositoryImpl(
     private val history: InMemoryHistoryStore
 ) : BluetoothRepository {
 
-    private val devices = MutableStateFlow<List<BleDevice>>(emptyList())
-    private val latestPacketId = MutableStateFlow(-1)
+    // Main Device List and Status
+    private val _devices = MutableStateFlow<List<BleDevice>>(emptyList())
+    private val _latestPacketId = MutableStateFlow(-1)
+
+    // Specialized History Flows
+    private val _dataLoggerHistory = MutableStateFlow<List<SensorData.DataLoggerData>>(emptyList())
+    private val _tempLoggerHistory = MutableStateFlow<Map<String, List<SensorData.TempLoggerData>>>(emptyMap())
+    private val _latestTempLogger = MutableStateFlow<Map<String, SensorData.TempLoggerData?>>(emptyMap())
+
+    private val repoScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     init {
-
-        val repoScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
+        // Observe the scanner results and route them to the appropriate flows
         scanner.results.onEach { result ->
             val parsed = parser.parse(result) ?: return@onEach
             val deviceAddress = result.device.address
 
+            // 1. Logic for DataLogger routing
+            if (parsed is SensorData.DataLoggerData) {
+                _latestPacketId.value = parsed.currentPacketId
+                addDataLoggerPacket(parsed)
+            }
 
+            // 2. Logic for TempLogger routing
+            if (parsed is SensorData.TempLoggerData) {
+                addTempLoggerPacket(deviceAddress, parsed)
+            }
+
+            // 3. Persistent History Store logic (Deduplication)
             val lastSavedEntry = history.get(deviceAddress).lastOrNull()?.sensorData
-
             val isNewData = when {
                 parsed is SensorData.TempLoggerData && lastSavedEntry is SensorData.TempLoggerData -> {
                     parsed.rawData != lastSavedEntry.rawData
@@ -41,7 +56,6 @@ class BluetoothRepositoryImpl(
                 parsed is SensorData.DataLoggerData && lastSavedEntry is SensorData.DataLoggerData -> {
                     parsed.lastPacketId != lastSavedEntry.lastPacketId
                 }
-
                 else -> true
             }
 
@@ -49,48 +63,83 @@ class BluetoothRepositoryImpl(
                 history.add(deviceAddress, HistoricalDataEntry(System.currentTimeMillis(), parsed))
             }
 
-             val device = BleDevice(
+            // 4. Update Main Device List
+            val device = BleDevice(
                 name = result.device.name ?: "Unknown",
                 address = deviceAddress,
                 rssi = result.rssi.toString(),
                 deviceId = parsed.deviceId,
                 sensorData = parsed
             )
-            update(device)
-
-             if (parsed is SensorData.DataLoggerData) {
-                latestPacketId.value = parsed.currentPacketId
-            }
+            updateDeviceList(device)
 
         }.launchIn(repoScope)
     }
+
+    /* ---------- Scan Controls ---------- */
+
     override fun startScan(activity: Activity) = scanner.start(activity)
     override fun stopScan() = scanner.stop()
+    override fun observeScanningState(): Flow<Boolean> = scanner.isScanning
 
-    override fun observeDevices() = devices
-    override fun observeLatestPacketId() = latestPacketId
+    /* ---------- Data Observation ---------- */
 
-    override fun observeTempLoggerHistory(address: String): Flow<List<SensorData.TempLoggerData>> =
-        flow {
-            emit(history.get(address).mapNotNull { it.sensorData as? SensorData.TempLoggerData })
-        }
+    override fun observeDevices() = _devices.asStateFlow()
+    override fun observeLatestPacketId() = _latestPacketId.asStateFlow()
+    override fun observeDataLoggerHistory() = _dataLoggerHistory.asStateFlow()
+    override fun observeTempLoggerHistory() = _tempLoggerHistory.asStateFlow()
+    override fun observeLatestTempLogger() = _latestTempLogger.asStateFlow()
 
+    // Specific fetch for history
     override fun getDeviceHistory(address: String) = history.get(address)
 
-    private fun update(device: BleDevice) {
-        devices.update {
-            val i = it.indexOfFirst { d -> d.address == device.address }
-            if (i >= 0) it.toMutableList().also { l -> l[i] = device }
-            else it + device
+    // Legacy/Manual history fetch
+    override fun observeTempLoggerHistory(address: String): Flow<List<SensorData.TempLoggerData>> =
+        _tempLoggerHistory.map { it[address] ?: emptyList() }
+
+    /* ---------- State Mutation ---------- */
+
+    private fun updateDeviceList(device: BleDevice) {
+        _devices.update { currentList ->
+            val index = currentList.indexOfFirst { it.address == device.address }
+            if (index >= 0) {
+                currentList.toMutableList().apply { this[index] = device }
+            } else {
+                currentList + device
+            }
+        }
+    }
+
+    override suspend fun addDataLoggerPacket(packet: SensorData.DataLoggerData) {
+        _dataLoggerHistory.update { current ->
+            // Deduplicate based on Packet ID
+            if (current.any { it.lastPacketId == packet.lastPacketId }) current
+            else current + packet
+        }
+    }
+
+    override suspend fun addTempLoggerPacket(deviceAddress: String, packet: SensorData.TempLoggerData) {
+        // Update the "Latest" snapshot map
+        _latestTempLogger.update { it + (deviceAddress to packet) }
+
+        // Update the history map
+        _tempLoggerHistory.update { currentMap ->
+            val deviceList = currentMap[deviceAddress] ?: emptyList()
+            // Deduplicate based on raw byte data
+            if (deviceList.any { it.rawData == packet.rawData }) {
+                currentMap
+            } else {
+                currentMap + (deviceAddress to (deviceList + packet))
+            }
         }
     }
 
     override fun clearDevices() {
-         devices.value = emptyList()
-
-
+        _devices.value = emptyList()
+        _dataLoggerHistory.value = emptyList()
+        _tempLoggerHistory.value = emptyMap()
+        _latestTempLogger.value = emptyMap()
+        _latestPacketId.value = -1
         history.clearAll()
     }
-
-    override fun observeScanningState(): Flow<Boolean> = scanner.isScanning
 }

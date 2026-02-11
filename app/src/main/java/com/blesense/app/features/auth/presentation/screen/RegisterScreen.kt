@@ -14,6 +14,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,8 +33,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blesense.app.* // For ThemeManager, helveticaFont, R
-import com.blesense.app.core.common.google.GoogleSignInHelper
+import com.blesense.app.* import com.blesense.app.core.common.google.GoogleSignInHelper
+import com.blesense.app.coreui.theme.ThemeManager
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import com.blesense.app.features.auth.presentation.viewmodel.AuthState
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -43,10 +46,11 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
-    // 1. Theme state (Keep original)
     val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+    val context = LocalContext.current
+    val authState by viewModel.authState.collectAsState()
 
-    // 2. Theme-based colors (Keep original Source of Trust)
+    // Theme colors
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color.White
     val textColor = if (isDarkMode) Color.White else Color.Black
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF8E8E93)
@@ -56,22 +60,22 @@ fun RegisterScreen(
     val dividerColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.LightGray
     val borderColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.LightGray
 
-    // 3. UI State (Keep all original fields)
+    // Form State
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var isUsernameValid by remember { mutableStateOf(false) }
-    var isEmailValid by remember { mutableStateOf(false) }
-    var isPasswordValid by remember { mutableStateOf(false) }
-    var isConfirmPasswordValid by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-    val authState by viewModel.authState.collectAsState()
+    // Validation State
+    val isUsernameValid = remember(username) { username.length >= 4 }
+    val isEmailValid = remember(email) { email.contains("@") && email.contains(".") }
+    val isPasswordValid = remember(password) { password.length >= 8 }
+    val isConfirmPasswordValid = remember(password, confirmPassword) { password == confirmPassword && confirmPassword.isNotEmpty() }
 
-    // 4. Google Sign-In Launcher (Restored to work with Clean Architecture ViewModel)
+    // Google Sign-In Setup
+    val googleSignInClient = remember { GoogleSignInHelper.getGoogleSignInClient(context) }
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -79,56 +83,35 @@ fun RegisterScreen(
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                // Pointing to the new ViewModel's Google Sign-In method
-                account.idToken?.let { viewModel.signInWithGoogle(it) }
+                account?.idToken?.let { viewModel.loginWithGoogle(it) }
             } catch (e: ApiException) {
-                viewModel.handleGoogleSignInError("Google Sign-In failed: ${e.message}")
+                Toast.makeText(context, "Google Sign-In Failed", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            viewModel.handleGoogleSignInError("Google Sign-In was cancelled")
         }
     }
 
-    val googleSignInClient = remember { GoogleSignInHelper.getGoogleSignInClient(context) }
-    LaunchedEffect(Unit) {
-        viewModel.setGoogleSignInClient(googleSignInClient)
+    // Auth Navigation Logic
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Success) onNavigateToHome()
+        if (authState is AuthState.Error) {
+            Toast.makeText(context, (authState as AuthState.Error).message, Toast.LENGTH_LONG).show()
+        }
     }
 
-    // 5. Validation Logic (Keep original Source of Trust)
-    fun validateUsername(value: String): Boolean = value.length >= 4 && value.matches(Regex("^[a-zA-Z0-9_]+$"))
-    fun validateEmail(value: String): Boolean = value.matches(Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$"))
-    fun validatePassword(value: String): Boolean {
-        return value.length >= 8 &&
-                Regex("[A-Z]").containsMatchIn(value) &&
-                Regex("[a-z]").containsMatchIn(value) &&
-                Regex("\\d").containsMatchIn(value) &&
-                Regex("[!@#\$%^&()_+\\-=\\[\\]{};':\"\\\\|,.<>/?]").containsMatchIn(value)
-    }
-
-    // Toasts (Keep original)
-    LaunchedEffect(username) { if (username.length > 4) Toast.makeText(context, "Username must be less than 8 chars, digits, and _ allowed", Toast.LENGTH_SHORT).show() }
-    LaunchedEffect(password) { if (password.length > 8) Toast.makeText(context, "Password must be more than 8 chars, digits & special char", Toast.LENGTH_SHORT).show() }
-
-    // 6. Navigation and Loading State (Refactored for AuthState)
     if (authState is AuthState.Loading) {
         AlertDialog(
             onDismissRequest = { },
+            confirmButton = { },
             title = { Text("Creating Account", color = textColor) },
             text = {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = buttonBackgroundColor)
                 }
             },
-            confirmButton = { },
             containerColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
         )
     }
 
-    LaunchedEffect(authState) {
-        if (authState is AuthState.Success) onNavigateToHome()
-    }
-
-    // 7. UI Layout (Exactly as original)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -139,160 +122,149 @@ fun RegisterScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(60.dp))
-
-        Text(
-            text = "Create Account",
-            style = TextStyle(fontSize = 34.sp, fontFamily = helveticaFont, fontWeight = FontWeight.Bold, color = textColor),
-            textAlign = TextAlign.Center
-        )
-
-        Text(
-            text = "Sign up to get started",
-            style = TextStyle(fontSize = 17.sp, color = secondaryTextColor, fontFamily = helveticaFont, fontWeight = FontWeight.Bold),
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
+        Text("Create Account", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = textColor)
+        Text("Sign up to get started", fontSize = 17.sp, color = secondaryTextColor, modifier = Modifier.padding(top = 8.dp))
         Spacer(modifier = Modifier.height(60.dp))
 
-        // Username Field
-        TextField(
+        // Username
+        AuthTextField(
             value = username,
-            onValueChange = { username = it; isUsernameValid = validateUsername(it) },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            placeholder = { Text("Username", color = secondaryTextColor) },
+            onValueChange = { username = it },
+            placeholder = "Username",
             isError = username.isNotEmpty() && !isUsernameValid,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = textFieldBackgroundColor,
-                unfocusedIndicatorColor = borderColor,
-                focusedIndicatorColor = buttonBackgroundColor,
-                focusedTextColor = textColor,
-                unfocusedTextColor = textColor
-            ),
-            shape = RoundedCornerShape(12.dp),
-            textStyle = TextStyle(fontSize = 17.sp, fontFamily = helveticaFont, color = textColor)
+            backgroundColor = textFieldBackgroundColor,
+            textColor = textColor,
+            borderColor = borderColor,
+            activeColor = buttonBackgroundColor
         )
 
-        // Email Field
-        TextField(
+        // Email
+        AuthTextField(
             value = email,
-            onValueChange = { email = it; isEmailValid = validateEmail(it) },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            placeholder = { Text("Email", color = secondaryTextColor) },
+            onValueChange = { email = it },
+            placeholder = "Email",
             isError = email.isNotEmpty() && !isEmailValid,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = textFieldBackgroundColor,
-                unfocusedIndicatorColor = borderColor,
-                focusedIndicatorColor = buttonBackgroundColor,
-                focusedTextColor = textColor,
-                unfocusedTextColor = textColor
-            ),
-            shape = RoundedCornerShape(12.dp),
-            textStyle = TextStyle(fontSize = 17.sp, fontFamily = helveticaFont, color = textColor)
+            keyboardType = KeyboardType.Email,
+            backgroundColor = textFieldBackgroundColor,
+            textColor = textColor,
+            borderColor = borderColor,
+            activeColor = buttonBackgroundColor
         )
 
-        // Password Field
-        val interactionSource = remember { MutableInteractionSource() }
-        val isFocused by interactionSource.collectIsFocusedAsState()
-
-        TextField(
+        // Password
+        AuthTextField(
             value = password,
-            onValueChange = { password = it; isPasswordValid = validatePassword(it) },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            placeholder = { Text("Password", color = secondaryTextColor) },
+            onValueChange = { password = it },
+            placeholder = "Password",
             isError = password.isNotEmpty() && !isPasswordValid,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
-            trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }, modifier = Modifier.size(24.dp)) {
-                    Icon(painter = painterResource(id = if (passwordVisible) R.drawable.invisible else R.drawable.show), contentDescription = null, tint = Color.Unspecified)
-                }
-            },
-            interactionSource = interactionSource,
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = textFieldBackgroundColor,
-                unfocusedIndicatorColor = borderColor,
-                focusedIndicatorColor = if (isFocused && isPasswordValid) Color.Blue else buttonBackgroundColor,
-                focusedTextColor = textColor,
-                unfocusedTextColor = textColor,
-                errorIndicatorColor = Color.Red
-            ),
-            shape = RoundedCornerShape(12.dp),
-            textStyle = TextStyle(fontSize = 17.sp, fontFamily = helveticaFont, color = textColor)
+            isPassword = true,
+            passwordVisible = passwordVisible,
+            onToggleVisibility = { passwordVisible = !passwordVisible },
+            backgroundColor = textFieldBackgroundColor,
+            textColor = textColor,
+            borderColor = borderColor,
+            activeColor = buttonBackgroundColor
         )
 
-        // Confirm Password Field
-        TextField(
+        // Confirm Password
+        AuthTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it; isConfirmPasswordValid = password == it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Confirm Password", color = secondaryTextColor) },
+            onValueChange = { confirmPassword = it },
+            placeholder = "Confirm Password",
             isError = confirmPassword.isNotEmpty() && !isConfirmPasswordValid,
-            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            trailingIcon = {
-                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }, modifier = Modifier.size(24.dp)) {
-                    Icon(painter = painterResource(id = if (confirmPasswordVisible) R.drawable.invisible else R.drawable.show), contentDescription = null, tint = Color.Unspecified)
-                }
-            },
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = textFieldBackgroundColor,
-                unfocusedIndicatorColor = borderColor,
-                focusedIndicatorColor = buttonBackgroundColor,
-                focusedTextColor = textColor,
-                unfocusedTextColor = textColor
-            ),
-            shape = RoundedCornerShape(12.dp),
-            textStyle = TextStyle(fontSize = 17.sp, fontFamily = helveticaFont, color = textColor)
+            isPassword = true,
+            passwordVisible = confirmPasswordVisible,
+            onToggleVisibility = { confirmPasswordVisible = !confirmPasswordVisible },
+            backgroundColor = textFieldBackgroundColor,
+            textColor = textColor,
+            borderColor = borderColor,
+            activeColor = buttonBackgroundColor
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Create Account Button (Pointing to new VM)
         Button(
-            onClick = {
-                if (isUsernameValid && isEmailValid && isPasswordValid && password == confirmPassword) {
-                    viewModel.register(email, password) // Clean Arch call
-                }
-            },
+            onClick = { viewModel.register(email, password) },
             enabled = isUsernameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid,
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = buttonBackgroundColor, disabledContainerColor = buttonBackgroundColor.copy(alpha = 0.7f)),
+            colors = ButtonDefaults.buttonColors(containerColor = buttonBackgroundColor),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(text = "Create Account", style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, fontFamily = helveticaFont, color = buttonTextColor))
+            Text("Create Account", color = buttonTextColor, fontWeight = FontWeight.SemiBold)
         }
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Divider (Original)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = dividerColor)
-            Text(text = "Or continue with", modifier = Modifier.padding(horizontal = 16.dp), style = TextStyle(fontSize = 15.sp, color = secondaryTextColor, fontFamily = helveticaFont, fontWeight = FontWeight.Bold))
-            HorizontalDivider(modifier = Modifier.weight(1f), color = dividerColor)
+        // Social Login
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            HorizontalDivider(Modifier.weight(1f), color = dividerColor)
+            Text("Or continue with", Modifier.padding(horizontal = 16.dp), color = secondaryTextColor, fontSize = 15.sp)
+            HorizontalDivider(Modifier.weight(1f), color = dividerColor)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Social Button (Restored Google Launcher)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            SocialLoginButton(
-                icon = R.drawable.google_g,
-                onClick = { launcher.launch(googleSignInClient.signInIntent) },
-                backgroundColor = textFieldBackgroundColor,
-                borderColor = borderColor
-            )
-        }
+         SocialLoginButton(
+             icon = android.R.drawable.ic_menu_info_details,
+            onClick = { launcher.launch(googleSignInClient.signInIntent) },
+            backgroundColor = textFieldBackgroundColor,
+            borderColor = borderColor
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Footer (Original)
-        Row(modifier = Modifier.padding(bottom = 32.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Already have an account?", style = TextStyle(fontSize = 15.sp, color = textColor, fontFamily = helveticaFont, fontWeight = FontWeight.SemiBold))
+        Row(Modifier.padding(bottom = 32.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Already have an account?", color = textColor, fontSize = 15.sp)
             TextButton(onClick = onNavigateToLogin) {
-                Text(text = "Login Now", style = TextStyle(fontSize = 15.sp, color = buttonBackgroundColor, fontWeight = FontWeight.SemiBold, fontFamily = helveticaFont))
+                Text("Login Now", color = buttonBackgroundColor, fontWeight = FontWeight.Bold)
             }
         }
     }
+}
+
+@Composable
+fun AuthTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    isError: Boolean,
+    backgroundColor: Color,
+    textColor: Color,
+    borderColor: Color,
+    activeColor: Color,
+     keyboardType: KeyboardType = KeyboardType.Text,
+    isPassword: Boolean = false,
+    passwordVisible: Boolean = false,
+    onToggleVisibility: () -> Unit = {}
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+        placeholder = { Text(placeholder, color = Color.Gray) },
+        isError = isError,
+        visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),
+        trailingIcon = if (isPassword) {
+            {
+                IconButton(onClick = onToggleVisibility) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        tint = textColor.copy(alpha = 0.7f) // Matches your theme
+                    )
+                }
+            }
+        } else null,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = backgroundColor,
+            unfocusedContainerColor = backgroundColor,
+            errorContainerColor = backgroundColor,
+            focusedIndicatorColor = activeColor,
+            unfocusedIndicatorColor = borderColor,
+            focusedTextColor = textColor,
+            unfocusedTextColor = textColor
+        ),
+        shape = RoundedCornerShape(12.dp)
+    )
 }

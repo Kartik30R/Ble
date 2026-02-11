@@ -3,6 +3,7 @@ package com.blesense.app.core.permission
 import android.*
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.*
 import android.content.pm.PackageManager
 import android.location.LocationManager
@@ -22,20 +23,37 @@ class BluetoothPermissionManager(
     private val _state = MutableStateFlow<BluetoothPermissionState>(BluetoothPermissionState.Idle)
     val state = _state.asStateFlow()
 
+    /**
+     * The core logic to check and request all requirements.
+     */
     fun ensureReady(onReady: () -> Unit) {
+        val permissions = requiredPermissions()
+        val missingPermissions = permissions.filter {
+            ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED
+        }
+
         when {
-            !hasPermissions() -> {
+            // 1. Check Permissions
+            missingPermissions.isNotEmpty() -> {
                 _state.value = BluetoothPermissionState.PermissionsRequired
-                permissionLauncher.launch(requiredPermissions())
+                permissionLauncher.launch(missingPermissions.toTypedArray())
             }
+
+            // 2. Check Bluetooth Hardware State
             !isBluetoothEnabled() -> {
                 _state.value = BluetoothPermissionState.BluetoothDisabled
-                bluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                bluetoothLauncher.launch(enableBtIntent)
             }
+
+            // 3. Check Location (Required for BLE discovery on most Android versions)
             !isLocationEnabled() -> {
                 _state.value = BluetoothPermissionState.LocationDisabled
-                locationLauncher.launch(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                val enableLocationIntent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                locationLauncher.launch(enableLocationIntent)
             }
+
+            // 4. Everything is good
             else -> {
                 _state.value = BluetoothPermissionState.Ready
                 onReady()
@@ -43,42 +61,48 @@ class BluetoothPermissionManager(
         }
     }
 
+    /**
+     * Called from the ActivityResultCallback in the UI layer
+     */
     fun onPermissionResult(granted: Boolean, onReady: () -> Unit) {
-        if (!granted) {
+        if (granted) {
+            ensureReady(onReady)
+        } else {
             _state.value = BluetoothPermissionState.PermissionDenied
-            return
         }
-        ensureReady(onReady)
     }
 
     fun onBluetoothResult(onReady: () -> Unit) = ensureReady(onReady)
     fun onLocationResult(onReady: () -> Unit) = ensureReady(onReady)
 
-    private fun hasPermissions(): Boolean =
-        requiredPermissions().all {
-            ContextCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_GRANTED
-        }
-
-    private fun requiredPermissions(): Array<String> =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        else
-            arrayOf(
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-
-    private fun isBluetoothEnabled() =
-        BluetoothAdapter.getDefaultAdapter()?.isEnabled == true
+    private fun isBluetoothEnabled(): Boolean {
+        val bm = activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        return bm.adapter?.isEnabled == true
+    }
 
     private fun isLocationEnabled(): Boolean {
         val lm = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return lm.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            lm.isLocationEnabled
+        } else {
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                    lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        }
+    }
+
+    private fun requiredPermissions(): Array<String> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION // Still needed for discovery unless flagged in Manifest
+            )
+        } else {
+            // Android 6.0 to 11
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        }
     }
 }

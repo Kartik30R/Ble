@@ -4,55 +4,49 @@ import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.blesense.app.features.bluetooth.domain.model.BleDevice
+import com.blesense.app.features.bluetooth.domain.model.HistoricalDataEntry
 import com.blesense.app.features.bluetooth.domain.model.SensorData
 import com.blesense.app.features.bluetooth.domain.usecase.*
-
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
 class BluetoothScanViewModel(
     private val startBleScan: StartBleScanUseCase,
     private val stopBleScan: StopBleScanUseCase,
-    observeDevices: ObserveDevicesUseCase,
-    observeLatestPacketId: ObserveLatestPacketIdUseCase,
+    private val observeScanningStatus: ObserveScanningStateUseCase,
+    private val observeDevices: ObserveDevicesUseCase,
     private val clearDevicesUseCase: ClearDevicesUseCase,
+    private val observeLatestPacketId: ObserveLatestPacketIdUseCase,
+    private val observeDataLoggerHistory: ObserveDataLoggerHistoryUseCase,
     private val observeTempLoggerHistory: ObserveTempLoggerHistoryUseCase,
-    private val getDeviceHistory: GetDeviceHistoryUseCase,
-    private val observeScanningStatus: ObserveScanningStateUseCase, // UseCase injected here
+    private val observeLatestTempLogger: ObserveLatestTempLoggerUseCase,
+    private val addSensorPacket: AddSensorPacketUseCase,
+    private val getDeviceHistoryUseCase: GetDeviceHistoryUseCase,
 ) : ViewModel() {
 
-    /* -------------------- STATE FROM REPOSITORY -------------------- */
+    /* ---------- STATE ---------- */
 
-    val devices: StateFlow<List<BleDevice>> =
-        observeDevices()
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5_000),
-                emptyList()
-            )
-
-    val latestPacketId: StateFlow<Int> =
-        observeLatestPacketId()
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5_000),
-                -1
-            )
-
-    /* -------------------- DYNAMIC UI STATE -------------------- */
-
-    // FIX: Added () to invoke the Use Case and get the Flow
     val isScanning: StateFlow<Boolean> = observeScanningStatus()
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            false
-        )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    /* -------------------- ACTIONS -------------------- */
+    val devices: StateFlow<List<BleDevice>> = observeDevices()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val dataLoggerPacketHistory: StateFlow<List<SensorData.DataLoggerData>> = observeDataLoggerHistory()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val latestPacketId: StateFlow<Int> = observeLatestPacketId()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1)
+
+    val tempLoggerPacketHistory: StateFlow<Map<String, List<SensorData.TempLoggerData>>> = observeTempLoggerHistory()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val latestTempLoggerPacket: StateFlow<Map<String, SensorData.TempLoggerData?>> = observeLatestTempLogger()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /* ---------- ACTIONS ---------- */
 
     fun startScan(activity: Activity) {
-        // We no longer need to manually toggle a boolean!
-        // The 'isScanning' flow above will update automatically
-        // once the repository starts the hardware.
         startBleScan(activity)
     }
 
@@ -60,18 +54,21 @@ class BluetoothScanViewModel(
         stopBleScan()
     }
 
-    fun observeTempLoggerHistory(deviceAddress: String): Flow<List<SensorData.TempLoggerData>> =
-        observeTempLoggerHistory.invoke(deviceAddress)
-
-    fun getFullDeviceHistory(deviceAddress: String) =
-        getDeviceHistory(deviceAddress)
-
     fun clearDevices() {
-        clearDevicesUseCase.invoke()
+        clearDevicesUseCase()
     }
 
-    override fun onCleared() {
-        stopBleScan()
-        super.onCleared()
+    fun onSensorDataReceived(data: SensorData) {
+        viewModelScope.launch {
+            addSensorPacket(data)
+        }
+    }
+    fun observeTempLoggerHistory(deviceAddress: String): Flow<List<SensorData.TempLoggerData>> {
+        return tempLoggerPacketHistory.map { historyMap ->
+            historyMap[deviceAddress] ?: emptyList()
+        }
+    }
+    fun getDeviceHistory(deviceAddress: String): List<HistoricalDataEntry> {
+        return getDeviceHistoryUseCase(deviceAddress)
     }
 }

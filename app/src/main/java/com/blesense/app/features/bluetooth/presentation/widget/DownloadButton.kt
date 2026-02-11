@@ -111,7 +111,7 @@ fun exportDataToCSV(
             try {
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     // 1. Get historical data using the correct UseCase-backed method
-                    val historicalData = viewModel.getFullDeviceHistory(deviceAddress).toMutableList()
+                    val historicalData = viewModel.getDeviceHistory(deviceAddress).toMutableList()
 
                     // 2. Add current live data if no history exists
                     if (historicalData.isEmpty()) {
@@ -168,8 +168,7 @@ fun exportDataToCSV(
                         dataBuilder.append("\n")
                         outputStream.write(dataBuilder.toString().toByteArray())
 
-                        // Periodic flush to prevent memory bloat
-                        if (index % 100 == 0) outputStream.flush()
+                         if (index % 100 == 0) outputStream.flush()
                     }
                 }
             } catch (e: Exception) {

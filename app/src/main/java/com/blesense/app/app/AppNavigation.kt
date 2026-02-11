@@ -14,36 +14,37 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.blesense.app.*
 import com.blesense.app.Presentation.AdvertisingDataScreen
-import com.blesense.app.Presentation.AnimatedFirstScreen
-import com.blesense.app.Presentation.IntermediateScreen
-import com.blesense.app.Presentation.MainScreen
+ import com.blesense.app.Presentation.MainScreen
+import com.blesense.app.core.di.BluetoothModule
 import com.blesense.app.core.presentation.IntermediateScreen
+import com.blesense.app.features.auth.presentation.screen.AnimatedFirstScreen
 import com.blesense.app.features.auth.presentation.viewmodel.AuthState
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModelFactory
 import com.blesense.app.features.auth.presentation.screen.RegisterScreen
+import com.blesense.app.features.bluetooth.presentation.screens.dataLogger.DataLoggerScreen
 import com.blesense.app.features.bluetooth.presentation.viewmodel.BluetoothScanViewModelFactory
+import com.blesense.app.features.remote.RobotControlScreen
+import com.blesense.app.features.settings.presentation.screens.ModernSettingsScreen
 import presentation.viewmodel.BluetoothScanViewModel
+import kotlin.getValue
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
-
-    // -------- Auth ViewModel (Clean Architecture) --------
-    val authViewModel: AuthViewModel = viewModel(
-        factory = AuthViewModelFactory()
-    )
+    // Auth logic remains as is...
+    val authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory())
     val authState by authViewModel.authState.collectAsState()
 
-    // -------- Bluetooth ViewModel --------
+    // Bluetooth ViewModel setup
     val context = LocalContext.current
-    val application = context.applicationContext as Application
     val activity = context as ComponentActivity
 
-    val bluetoothViewModel: BluetoothScanViewModel<kotlin.Any?> by activity.viewModels {
-        BluetoothScanViewModelFactory(application)
-    }
+    // Binding the ViewModel using your BluetoothModule DI
+    val bluetoothViewModel: BluetoothScanViewModel = activity.viewModels<BluetoothScanViewModel> {
+        BluetoothModule.bluetoothScanViewModelFactory()
+    }.value
 
-    // -------- Global Auth Navigation Sync --------
+    // Navigation Sync
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Success -> {
@@ -52,20 +53,15 @@ fun AppNavigation(navController: NavHostController) {
                     popUpTo(Routes.FIRST) { inclusive = true }
                 }
             }
-
             is AuthState.Idle -> {
-                if (navController.currentDestination?.route !in
-                    listOf(Routes.SPLASH, Routes.FIRST)
-                ) {
-                    navController.navigate(Routes.FIRST) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                if (navController.currentDestination?.route !in listOf(Routes.SPLASH, Routes.FIRST)) {
+                    navController.navigate(Routes.FIRST) { popUpTo(0) { inclusive = true } }
                 }
             }
-
             else -> Unit
         }
     }
+
 
     // -------- NavHost --------
     NavHost(
@@ -145,8 +141,7 @@ fun AppNavigation(navController: NavHostController) {
         composable(Routes.INTERMEDIATE) {
             IntermediateScreen(
                 navController = navController,
-                isDarkMode = ThemeManager.isDarkMode.collectAsState().value
-            )
+             )
         }
 
         // -------- Home --------
@@ -212,22 +207,22 @@ fun AppNavigation(navController: NavHostController) {
                 deviceAddress = entry.arguments?.getString("deviceAddress") ?: "",
                 deviceId = entry.arguments?.getString("deviceId") ?: "",
                 navController = navController,
-                viewModel = bluetoothViewModel as BluetoothScanViewModel<Any>
+                viewModel = bluetoothViewModel as BluetoothScanViewModel
             )
         }
 
         // -------- Charts --------
-        composable(
-            route = Routes.CHART,
-            arguments = listOf(
-                navArgument("deviceAddress") { type = NavType.StringType }
-            )
-        ) { entry ->
-            ChartScreen(
-                navController = navController,
-                deviceAddress = entry.arguments?.getString("deviceAddress")
-            )
-        }
+//        composable(
+//            route = Routes.CHART,
+//            arguments = listOf(
+//                navArgument("deviceAddress") { type = NavType.StringType }
+//            )
+//        ) { entry ->
+//            ChartScreen(
+//                navController = navController,
+//                deviceAddress = entry.arguments?.getString("deviceAddress")
+//            )
+//        }
 
         composable(
             route = Routes.CHART_2,

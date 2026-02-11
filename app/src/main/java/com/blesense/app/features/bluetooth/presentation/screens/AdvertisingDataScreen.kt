@@ -17,13 +17,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.blesense.app.DataLoggerDisplay
-import com.blesense.app.Presentation.widgets.HeaderSection
+ import com.blesense.app.Presentation.widgets.HeaderSection
 import com.blesense.app.R
-import com.blesense.app.ThemeManager
+
 import com.blesense.app.coreui.constants.AppStrings
+import com.blesense.app.coreui.theme.ThemeManager
 import com.blesense.app.features.bluetooth.domain.model.SensorData
- import com.blesense.app.features.bluetooth.presentation.widget.DeviceInfoSection
+import com.blesense.app.features.bluetooth.presentation.widget.DataLoggerDisplay
+import com.blesense.app.features.bluetooth.presentation.widget.DeviceInfoSection
 import com.blesense.app.features.bluetooth.presentation.widget.DownloadButton
 import com.blesense.app.features.bluetooth.presentation.widget.ResponsiveDataCards
 import com.blesense.app.features.bluetooth.presentation.widget.TempLoggerDisplay
@@ -241,7 +242,7 @@ fun AdvertisingDataScreen(
 
             // DataLogger Special View
             if (currentDevice?.sensorData is SensorData.DataLoggerData) {
-              DataLoggerDisplay(viewModel = viewModel)
+         DataLoggerDisplay(viewModel = viewModel)
             }
 
             // Sensor Readings Cards

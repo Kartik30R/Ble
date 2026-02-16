@@ -31,10 +31,13 @@ fun BluetoothDeviceItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
-            .clickable {
-                // Address encoded for safety in navigation
+             .clickable {
+                 val safeDeviceId = if (device.deviceId.isNullOrBlank()) "unknown" else device.deviceId
+
+                 val safeName = device.name.replace("/", "-").ifBlank { "Unknown" }
+
                 navController.navigate(
-                    "advertising/${device.name.replace("/", "-")}/${device.address}/$selectedSensor/${device.deviceId}"
+                    "advertising/$safeName/${device.address}/$selectedSensor/$safeDeviceId"
                 )
             },
         verticalAlignment = Alignment.CenterVertically

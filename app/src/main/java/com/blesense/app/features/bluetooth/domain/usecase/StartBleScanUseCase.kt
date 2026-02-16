@@ -6,7 +6,7 @@ import com.blesense.app.features.bluetooth.domain.repository.BluetoothRepository
 class StartBleScanUseCase(
     private val repository: BluetoothRepository
 ) {
-    operator fun invoke(activity: Activity) {
-        repository.startScan(activity)
+    operator fun invoke() {
+        repository.startScan()
     }
 }

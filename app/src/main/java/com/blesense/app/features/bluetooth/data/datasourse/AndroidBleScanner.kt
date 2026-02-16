@@ -1,64 +1,41 @@
-package com.blesense.app.features.bluetooth.data.datasourse
+package com.blesense.app.features.bluetooth.data.datasource
 
-import android.*
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.bluetooth.*
-import android.bluetooth.le.*
-import android.content.pm.PackageManager
-import android.os.*
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 
 class AndroidBleScanner {
 
-
     private var callback: ScanCallback? = null
-    private var job: Job? = null
+    private var restartJob: Job? = null
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _isScanning = MutableStateFlow(false)
-    val isScanning = _isScanning.asStateFlow()
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
-     private val _results = MutableSharedFlow<ScanResult>(extraBufferCapacity = 128)
-    val results = _results.asSharedFlow()
-
-    /**
-     * Entry point to start the BLE scan with automatic 5-minute restarts
-     * to bypass Android's background scanning limitations.
-     */
-    fun start(activity: Activity) {
-        if (job != null) return // Already running
-
-        if (!hasPermission(activity)) {
-            _isScanning.value = false
-            return
-        }
-
-        _isScanning.value = true
-
-        job = CoroutineScope(Dispatchers.Default).launch {
-            startInternal(activity)
-            // Loop for periodic restart logic
-            while (isActive) {
-                delay(5 * 60 * 1000L) // 5 minutes
-                restart(activity)
-            }
-        }
-    }
+    private val _results = MutableSharedFlow<ScanResult>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val results: SharedFlow<ScanResult> = _results.asSharedFlow()
 
     /**
-     * Stops the scan and cancels the background management job.
+     * Starts BLE scanning.
+     * Assumes permissions are already granted by UI layer.
      */
-    fun stop() {
-        _isScanning.value = false
-        job?.cancel()
-        job = null
-        stopInternal()
-    }
-
     @SuppressLint("MissingPermission")
-    private fun startInternal(activity: Activity) {
-        // 1. Safety check for Bluetooth Hardware state
+    fun start() {
+        if (_isScanning.value) return
+
         val adapter = BluetoothAdapter.getDefaultAdapter()
         val scanner = adapter?.bluetoothLeScanner
 
@@ -67,68 +44,92 @@ class AndroidBleScanner {
             return
         }
 
-        // 2. Define Callback
+        _isScanning.value = true
+
         callback = object : ScanCallback() {
+
             override fun onScanResult(callbackType: Int, result: ScanResult) {
-                if (!hasPermission(activity)) {
-                    stop()
-                    return
-                }
                 _results.tryEmit(result)
             }
 
             override fun onBatchScanResults(results: MutableList<ScanResult>) {
-                if (!hasPermission(activity)) {
-                    stop()
-                    return
-                }
                 results.forEach { _results.tryEmit(it) }
             }
 
             override fun onScanFailed(errorCode: Int) {
-                // If scanning fails (too many scans, etc.), update state
                 _isScanning.value = false
             }
         }
 
-        // 3. Start Native Scan
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
         scanner.startScan(null, settings, callback)
+
+        startPeriodicRestart()
     }
 
+    /**
+     * Stops BLE scanning completely.
+     */
     @SuppressLint("MissingPermission")
-    private fun stopInternal() {
+    fun stop() {
+        if (!_isScanning.value) return
+
+        restartJob?.cancel()
+        restartJob = null
+
         val scanner = BluetoothAdapter.getDefaultAdapter()?.bluetoothLeScanner
+
         callback?.let {
             try {
                 scanner?.stopScan(it)
-            } catch (e: Exception) {
-                // Handle cases where BT was turned off mid-scan
+            } catch (_: Exception) {
+                // Ignore hardware state errors
             }
         }
+
         callback = null
+        _isScanning.value = false
     }
 
-    private fun restart(activity: Activity) {
-        if (!isScanning.value) return
+    /**
+     * Android throttles long-running scans.
+     * Restart every 5 minutes to maintain stability.
+     */
+    private fun startPeriodicRestart() {
+        restartJob?.cancel()
 
-        stopInternal()
-        // Brief delay before restarting to let the hardware reset
+        restartJob = scope.launch {
+            while (isActive) {
+                delay(5 * 60 * 1000L)
+                restart()
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun restart() {
+        if (!_isScanning.value) return
+
+        val scanner = BluetoothAdapter.getDefaultAdapter()?.bluetoothLeScanner
+        val currentCallback = callback ?: return
+
+        try {
+            scanner?.stopScan(currentCallback)
+        } catch (_: Exception) {}
+
         Handler(Looper.getMainLooper()).postDelayed({
-            if (job != null && job?.isActive == true) {
-                startInternal(activity)
+            if (_isScanning.value) {
+                scanner?.startScan(
+                    null,
+                    ScanSettings.Builder()
+                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                        .build(),
+                    currentCallback
+                )
             }
         }, 200)
     }
-
-    private fun hasPermission(activity: Activity): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            activity.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-                    activity.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-        } else {
-            activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        }
 }

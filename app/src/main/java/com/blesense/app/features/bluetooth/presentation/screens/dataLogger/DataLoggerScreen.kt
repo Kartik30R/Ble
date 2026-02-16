@@ -68,7 +68,7 @@ fun DataLoggerScreen(
     ) { result ->
         val granted = result.values.all { it }
         permissionManager.onPermissionResult(granted) {
-            viewModel.startScan(activity)
+            viewModel.startScan( )
         }
     }
 
@@ -76,7 +76,7 @@ fun DataLoggerScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         permissionManager.onBluetoothResult {
-            viewModel.startScan(activity)
+            viewModel.startScan( )
         }
     }
 
@@ -84,7 +84,7 @@ fun DataLoggerScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         permissionManager.onLocationResult {
-            viewModel.startScan(activity)
+            viewModel.startScan( )
         }
     }
 
@@ -105,7 +105,7 @@ fun DataLoggerScreen(
 
     LaunchedEffect(Unit) {
         permissionManager.ensureReady {
-            viewModel.startScan(activity)
+            viewModel.startScan( )
         }
     }
 

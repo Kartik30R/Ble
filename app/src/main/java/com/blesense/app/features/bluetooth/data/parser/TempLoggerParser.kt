@@ -14,10 +14,10 @@ class TempLoggerParser : SensorParser {
         val hInt = data[3].toInt() and 0xFF
         val hFrac = data[4].toInt() and 0xFF
 
-        val temp = "${data[1]}.${data[2].toUByte()}".toDouble()
-        val hum = "${data[3]}.${data[4].toUByte()}".toDouble()
+        val temp = "$tInt.$tFrac".toDouble()
+        val hum = "$hInt.$hFrac".toDouble()
 
-         if (temp !in 5.0..60.0 || hum !in 10.0..99.0) return null
+        if (temp !in 5.0..60.0 || hum !in 10.0..99.0) return null
 
 
         return SensorData.TempLoggerData(

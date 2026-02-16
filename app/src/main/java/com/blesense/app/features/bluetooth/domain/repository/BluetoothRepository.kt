@@ -5,7 +5,7 @@ import com.blesense.app.features.bluetooth.domain.model.*
  import kotlinx.coroutines.flow.Flow
 
 interface BluetoothRepository {
-    fun startScan(activity: Activity)
+    fun startScan()
     fun stopScan()
 
     fun observeDevices(): Flow<List<BleDevice>>

@@ -2,7 +2,7 @@ package com.blesense.app.features.bluetooth.data.repository
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import com.blesense.app.features.bluetooth.data.datasourse.AndroidBleScanner
+import com.blesense.app.features.bluetooth.data.datasource.AndroidBleScanner
 import com.blesense.app.features.bluetooth.data.datasourse.InMemoryHistoryStore
 import com.blesense.app.features.bluetooth.data.parser.SensorParserRouter
 import com.blesense.app.features.bluetooth.domain.model.BleDevice
@@ -30,55 +30,60 @@ class BluetoothRepositoryImpl(
 
     private val repoScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    init {
-        // Observe the scanner results and route them to the appropriate flows
-        scanner.results.onEach { result ->
-            val parsed = parser.parse(result) ?: return@onEach
-            val deviceAddress = result.device.address
+     init {
+        scanner.results
+            .onEach { result ->
 
-            // 1. Logic for DataLogger routing
-            if (parsed is SensorData.DataLoggerData) {
-                _latestPacketId.value = parsed.currentPacketId
-                addDataLoggerPacket(parsed)
-            }
+                val deviceAddress = result.device.address
+                val parsed = parser.parse(result)
 
-            // 2. Logic for TempLogger routing
-            if (parsed is SensorData.TempLoggerData) {
-                addTempLoggerPacket(deviceAddress, parsed)
-            }
+                if (parsed != null) {
 
-            // 3. Persistent History Store logic (Deduplication)
-            val lastSavedEntry = history.get(deviceAddress).lastOrNull()?.sensorData
-            val isNewData = when {
-                parsed is SensorData.TempLoggerData && lastSavedEntry is SensorData.TempLoggerData -> {
-                    parsed.rawData != lastSavedEntry.rawData
+                    val device = BleDevice(
+                        name = result.scanRecord?.deviceName
+                            ?: result.device.name
+                            ?: "BLE Device",
+                        address = deviceAddress,
+                        rssi = result.rssi.toString(),
+                        deviceId = parsed.deviceId,
+                        sensorData = parsed
+                    )
+
+                    updateDeviceList(device)
+
+                     history.add(
+                        deviceAddress,
+                        HistoricalDataEntry(
+                            timestamp = System.currentTimeMillis(),
+                            sensorData = parsed
+                        )
+                    )
+
+                    when (parsed) {
+
+                        is SensorData.DataLoggerData -> {
+                            _latestPacketId.value = parsed.currentPacketId
+                            repoScope.launch {
+                                addDataLoggerPacket(parsed)
+                            }
+                        }
+
+                        is SensorData.TempLoggerData -> {
+                            repoScope.launch {
+                                addTempLoggerPacket(deviceAddress, parsed)
+                            }
+                        }
+
+                        else -> Unit
+                    }
                 }
-                parsed is SensorData.DataLoggerData && lastSavedEntry is SensorData.DataLoggerData -> {
-                    parsed.lastPacketId != lastSavedEntry.lastPacketId
-                }
-                else -> true
             }
-
-            if (isNewData) {
-                history.add(deviceAddress, HistoricalDataEntry(System.currentTimeMillis(), parsed))
-            }
-
-            // 4. Update Main Device List
-            val device = BleDevice(
-                name = result.device.name ?: "Unknown",
-                address = deviceAddress,
-                rssi = result.rssi.toString(),
-                deviceId = parsed.deviceId,
-                sensorData = parsed
-            )
-            updateDeviceList(device)
-
-        }.launchIn(repoScope)
+            .launchIn(repoScope)
     }
 
     /* ---------- Scan Controls ---------- */
 
-    override fun startScan(activity: Activity) = scanner.start(activity)
+    override fun startScan( ) = scanner.start( )
     override fun stopScan() = scanner.stop()
     override fun observeScanningState(): Flow<Boolean> = scanner.isScanning
 

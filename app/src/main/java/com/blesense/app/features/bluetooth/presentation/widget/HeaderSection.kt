@@ -1,5 +1,6 @@
 package com.blesense.app.Presentation.widgets
 
+ import android.net.Uri
  import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -58,7 +59,8 @@ fun HeaderSection(
         // Chart navigation button
         IconButton(
             onClick = {
-                 navController.navigate("chart_screen/$deviceAddress")
+                val encoded = Uri.encode(deviceAddress)
+                navController.navigate("chart_screen/$encoded")
             }
         ) {
             Icon(

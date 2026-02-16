@@ -2,6 +2,7 @@ package com.blesense.app.app
 
 import android.app.Activity
 import android.app.Application
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.compose.runtime.*
@@ -175,6 +176,7 @@ fun AppNavigation(navController: NavHostController) {
         }
 
         // -------- Advertising --------
+        // In AppNavigation.kt
         composable(
             route = Routes.ADVERTISING,
             arguments = listOf(
@@ -184,10 +186,16 @@ fun AppNavigation(navController: NavHostController) {
                 navArgument("deviceId") { type = NavType.StringType }
             )
         ) { entry ->
+            // Extract everything to ensure the backstack is happy
+            val deviceName = entry.arguments?.getString("deviceName") ?: "Unknown"
+            val deviceAddress = entry.arguments?.getString("deviceAddress") ?: ""
+            val sensorType = entry.arguments?.getString("sensorType") ?: ""
+            val deviceId = entry.arguments?.getString("deviceId") ?: "0"
+
             AdvertisingDataScreen(
-                deviceName = entry.arguments?.getString("deviceName") ?: "",
-                deviceAddress = entry.arguments?.getString("deviceAddress") ?: "",
-                deviceId = entry.arguments?.getString("deviceId") ?: "",
+                deviceName = deviceName,
+                deviceAddress = deviceAddress,
+                deviceId = deviceId,
                 navController = navController,
                 viewModel = bluetoothViewModel
             )
@@ -212,17 +220,23 @@ fun AppNavigation(navController: NavHostController) {
         }
 
         // -------- Charts --------
-//        composable(
-//            route = Routes.CHART,
-//            arguments = listOf(
-//                navArgument("deviceAddress") { type = NavType.StringType }
-//            )
-//        ) { entry ->
-//            ChartScreen(
-//                navController = navController,
-//                deviceAddress = entry.arguments?.getString("deviceAddress")
-//            )
-//        }
+        composable(
+            route = "chart_screen/{deviceAddress}",
+            arguments = listOf(
+                navArgument("deviceAddress") { type = NavType.StringType }
+            )
+        )
+        { backStackEntry ->
+            val encodedAddress = backStackEntry.arguments?.getString("deviceAddress")
+            val deviceAddress = encodedAddress?.let { Uri.decode(it) }
+            ChartScreen(
+                navController = navController,
+                deviceAddress = deviceAddress,
+                viewModel = bluetoothViewModel   // SAME instance
+            )
+        }
+
+
 
         composable(
             route = Routes.CHART_2,

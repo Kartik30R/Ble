@@ -48,7 +48,7 @@ fun AdvertisingDataScreen(
 
     // --- Lifecycle Management ---
     LaunchedEffect(activity) {
-        activity?.let { viewModel.startScan(it) }
+        activity?.let { viewModel.startScan() }
     }
 
     // Handle Back Button and Cleanup

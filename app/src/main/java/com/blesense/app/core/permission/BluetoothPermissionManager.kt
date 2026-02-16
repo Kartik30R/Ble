@@ -19,45 +19,69 @@ class BluetoothPermissionManager(
     private val bluetoothLauncher: ActivityResultLauncher<Intent>,
     private val locationLauncher: ActivityResultLauncher<Intent>
 ) {
-
     private val _state = MutableStateFlow<BluetoothPermissionState>(BluetoothPermissionState.Idle)
     val state = _state.asStateFlow()
 
+    // NEW: BroadcastReceiver to listen for hardware changes "like before"
+    private val stateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            // Check permissions and hardware state whenever BT or Location status changes
+            refreshState()
+        }
+    }
+
+    init {
+        // Register for Bluetooth and Location state changes
+        val filter = IntentFilter().apply {
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+            addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
+        }
+        activity.registerReceiver(stateReceiver, filter)
+        refreshState()
+    }
+
+    // Call this when the ViewModel/Screen is destroyed
+    fun teardown() {
+        try {
+            activity.unregisterReceiver(stateReceiver)
+        } catch (e: Exception) { /* Already unregistered */ }
+    }
+
     /**
-     * The core logic to check and request all requirements.
+     * Checks the current state without necessarily launching prompts.
+     * This is what gives the UI its "automatic" feel.
      */
-    fun ensureReady(onReady: () -> Unit) {
+    fun refreshState() {
         val permissions = requiredPermissions()
-        val missingPermissions = permissions.filter {
-            ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED
+        val hasPermissions = permissions.all {
+            ContextCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_GRANTED
         }
 
         when {
-            // 1. Check Permissions
-            missingPermissions.isNotEmpty() -> {
-                _state.value = BluetoothPermissionState.PermissionsRequired
-                permissionLauncher.launch(missingPermissions.toTypedArray())
-            }
+            !hasPermissions -> _state.value = BluetoothPermissionState.PermissionsRequired
+            !isBluetoothEnabled() -> _state.value = BluetoothPermissionState.BluetoothDisabled
+            !isLocationEnabled() -> _state.value = BluetoothPermissionState.LocationDisabled
+            else -> _state.value = BluetoothPermissionState.Ready
+        }
+    }
 
-            // 2. Check Bluetooth Hardware State
-            !isBluetoothEnabled() -> {
-                _state.value = BluetoothPermissionState.BluetoothDisabled
-                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                bluetoothLauncher.launch(enableBtIntent)
-            }
+    fun ensureReady(onReady: () -> Unit) {
+        refreshState()
 
-            // 3. Check Location (Required for BLE discovery on most Android versions)
-            !isLocationEnabled() -> {
-                _state.value = BluetoothPermissionState.LocationDisabled
-                val enableLocationIntent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                locationLauncher.launch(enableLocationIntent)
+        when (val currentState = _state.value) {
+            is BluetoothPermissionState.PermissionsRequired -> {
+                permissionLauncher.launch(requiredPermissions())
             }
-
-            // 4. Everything is good
-            else -> {
-                _state.value = BluetoothPermissionState.Ready
+            is BluetoothPermissionState.BluetoothDisabled -> {
+                bluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+            }
+            is BluetoothPermissionState.LocationDisabled -> {
+                locationLauncher.launch(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
+            is BluetoothPermissionState.Ready -> {
                 onReady()
             }
+            else -> { /* Handle denied states */ }
         }
     }
 

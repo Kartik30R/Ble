@@ -24,6 +24,7 @@ uiText = "1.9.0"
 firebaseDatabaseKtx = "22.0.1"
 runtime = "1.10.0"
 material3 = "1.4.0"
+uiGraphics = "1.10.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -55,6 +56,7 @@ androidx-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.re
 firebase-database-ktx = { group = "com.google.firebase", name = "firebase-database-ktx", version.ref = "firebaseDatabaseKtx" }
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

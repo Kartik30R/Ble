@@ -1,7 +1,6 @@
 package com.blesense.app.app
 
 import android.app.Activity
-import android.app.Application
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
@@ -24,11 +23,9 @@ import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModelFactory
 import com.blesense.app.features.auth.presentation.screen.RegisterScreen
 import com.blesense.app.features.bluetooth.presentation.screens.dataLogger.DataLoggerScreen
-import com.blesense.app.features.bluetooth.presentation.viewmodel.BluetoothScanViewModelFactory
 import com.blesense.app.features.remote.RobotControlScreen
 import com.blesense.app.features.settings.presentation.screens.ModernSettingsScreen
 import presentation.viewmodel.BluetoothScanViewModel
-import kotlin.getValue
 
 @Composable
 fun AppNavigation(navController: NavHostController) {

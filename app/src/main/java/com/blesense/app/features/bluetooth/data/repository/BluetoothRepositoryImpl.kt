@@ -2,6 +2,7 @@ package com.blesense.app.features.bluetooth.data.repository
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.util.Log
 import com.blesense.app.features.bluetooth.data.datasource.AndroidBleScanner
 import com.blesense.app.features.bluetooth.data.datasourse.InMemoryHistoryStore
 import com.blesense.app.features.bluetooth.data.parser.SensorParserRouter
@@ -30,28 +31,51 @@ class BluetoothRepositoryImpl(
 
     private val repoScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-     init {
+    init {
         scanner.results
             .onEach { result ->
 
                 val deviceAddress = result.device.address
+                val advName = result.scanRecord?.deviceName
+                val deviceName = result.device.name
+
+                val finalName = advName ?: deviceName
+
+                // 🔴 Ignore devices with no name (like old code)
+                if (finalName.isNullOrBlank()) {
+                    return@onEach
+                }
+
+                // 🔴 Only allow known sensor name patterns
+                val isKnownSensor =
+                    finalName.contains("Activity", ignoreCase = true) ||
+                            finalName.contains("TempLogger", ignoreCase = true) ||
+                            finalName.contains("DataLogger", ignoreCase = true) ||
+                            finalName.contains("SHT", ignoreCase = true) ||
+                            finalName.contains("Lux", ignoreCase = true) ||
+                            finalName.contains("SOIL", ignoreCase = true) ||
+                            finalName.contains("Speed", ignoreCase = true) ||
+                            finalName.contains("NH", ignoreCase = true)
+
+                if (!isKnownSensor) {
+                    return@onEach
+                }
+
                 val parsed = parser.parse(result)
+
+                val device = BleDevice(
+                    name = finalName,
+                    address = deviceAddress,
+                    rssi = result.rssi.toString(),
+                    deviceId = parsed?.deviceId ?: "Unknown",
+                    sensorData = parsed
+                )
+
+                updateDeviceList(device)
 
                 if (parsed != null) {
 
-                    val device = BleDevice(
-                        name = result.scanRecord?.deviceName
-                            ?: result.device.name
-                            ?: "BLE Device",
-                        address = deviceAddress,
-                        rssi = result.rssi.toString(),
-                        deviceId = parsed.deviceId,
-                        sensorData = parsed
-                    )
-
-                    updateDeviceList(device)
-
-                     history.add(
+                    history.add(
                         deviceAddress,
                         HistoricalDataEntry(
                             timestamp = System.currentTimeMillis(),
@@ -63,15 +87,11 @@ class BluetoothRepositoryImpl(
 
                         is SensorData.DataLoggerData -> {
                             _latestPacketId.value = parsed.currentPacketId
-                            repoScope.launch {
-                                addDataLoggerPacket(parsed)
-                            }
+                            repoScope.launch { addDataLoggerPacket(parsed) }
                         }
 
                         is SensorData.TempLoggerData -> {
-                            repoScope.launch {
-                                addTempLoggerPacket(deviceAddress, parsed)
-                            }
+                            repoScope.launch { addTempLoggerPacket(deviceAddress, parsed) }
                         }
 
                         else -> Unit
@@ -80,7 +100,6 @@ class BluetoothRepositoryImpl(
             }
             .launchIn(repoScope)
     }
-
     /* ---------- Scan Controls ---------- */
 
     override fun startScan( ) = scanner.start( )

@@ -120,8 +120,10 @@ class BluetoothPermissionManager(
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION // Still needed for discovery unless flagged in Manifest
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
+
         } else {
             // Android 6.0 to 11
             arrayOf(

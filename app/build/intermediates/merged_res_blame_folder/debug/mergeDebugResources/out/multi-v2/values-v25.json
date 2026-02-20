@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.blesense.app-mergeDebugResources-84:/values-v25/values-v25.xml",
+            "outputFile": "com.blesense.app-mergeDebugResources-77:/values-v25/values-v25.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\hp\\.gradle\\caches\\8.13\\transforms\\3c5814ca7e60b09fc35c7f0d0eddbb22\\transformed\\appcompat-1.6.1\\res\\values-v25\\values-v25.xml",
+                    "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\caches\\8.13\\transforms\\e9e4b50a9c14fb5ac489f3f04d867bb3\\transformed\\appcompat-1.6.1\\res\\values-v25\\values-v25.xml",
                     "from": {
                         "startLines": "2,3,4,6",
                         "startColumns": "4,4,4,4",

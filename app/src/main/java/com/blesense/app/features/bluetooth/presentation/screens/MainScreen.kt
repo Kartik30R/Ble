@@ -98,12 +98,7 @@
         /* Scan Reactivity                                  */
         /* ------------------------------------------------ */
 
-        LaunchedEffect(permissionState) {
-            when (permissionState) {
-                BluetoothPermissionState.Ready -> bluetoothViewModel.startScan()
-                else -> bluetoothViewModel.stopScan()
-            }
-        }
+
 
         /* ------------------------------------------------ */
         /* Cleanup                                          */

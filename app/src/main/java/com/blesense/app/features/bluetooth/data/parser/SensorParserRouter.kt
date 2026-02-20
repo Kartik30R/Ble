@@ -15,25 +15,42 @@ class SensorParserRouter(
     private val tempLogger: TempLoggerParser,
     private val dataLogger: DataLoggerParser
 ) {
-
-     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun parse(result: ScanResult): SensorData? {
 
-        // Require manufacturer data like old code
+        val deviceName = result.device?.name ?: return null
+
         val manufacturerData = result.scanRecord?.manufacturerSpecificData
             ?: return null
 
         if (manufacturerData.size() == 0) return null
 
-         return lux.parse(result)
-            ?: ammonia.parse(result)
-            ?: sht40.parse(result)
-            ?: lis2dh.parse(result)
-            ?: soil.parse(result)
-            ?: sdt.parse(result)
-            ?: tempLogger.parse(result)
-            ?: dataLogger.parse(result)
+        val deviceType = when {
+            deviceName.contains("SHT", true) -> "SHT40"
+            deviceName.contains("Lux", true) -> "Lux"
+            deviceName.contains("SOIL", true) -> "Soil"
+            deviceName.contains("Activity", true) -> "LIS2DH"
+            deviceName.contains("Speed", true) -> "SDT"
+            deviceName.contains("NH", true) -> "Ammonia"
+            deviceName.contains("DataLogger", true) ||
+                    deviceName.contains("DLOG", true) -> "DataLogger"
+            deviceName.contains("TempLogger", true) ||
+                    deviceName.contains("TLOG", true) -> "TempLogger"
+            else -> return null
+        }
+
+        return when (deviceType) {
+            "SHT40" -> sht40.parse(result)
+            "Lux" -> lux.parse(result)
+            "Soil" -> soil.parse(result)
+            "LIS2DH" -> lis2dh.parse(result)
+            "SDT" -> sdt.parse(result)
+            "Ammonia" -> ammonia.parse(result)
+            "DataLogger" -> dataLogger.parse(result)
+            "TempLogger" -> tempLogger.parse(result)
+            else -> null
+        }
     }
+
 
 
 }

@@ -1,27 +1,20 @@
 {
     "logs": [
         {
-            "outputFile": "com.blesense.app-mergeDebugResources-84:/values-night-v8/values-night-v8.xml",
+            "outputFile": "com.blesense.app-mergeDebugResources-77:/values-night-v8/values-night-v8.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\hp\\.gradle\\caches\\8.13\\transforms\\3c5814ca7e60b09fc35c7f0d0eddbb22\\transformed\\appcompat-1.6.1\\res\\values-night-v8\\values-night-v8.xml",
+                    "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\caches\\8.13\\transforms\\5d77a97de695bfb84ad31a366b2cfc8e\\transformed\\core-splashscreen-1.0.0\\res\\values-night-v8\\values-night-v8.xml",
                     "from": {
-                        "startLines": "2,3,4,5,6,7,8,9",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,125,209,293,389,491,593,687",
-                        "endColumns": "69,83,83,95,101,101,93,88",
-                        "endOffsets": "120,204,288,384,486,588,682,771"
-                    },
-                    "to": {
-                        "startLines": "3,4,5,6,7,8,9,35",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "141,211,295,379,475,577,679,3534",
-                        "endColumns": "69,83,83,95,101,101,93,88",
-                        "endOffsets": "206,290,374,470,572,674,768,3618"
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "85",
+                        "endOffsets": "136"
                     }
                 },
                 {
-                    "source": "C:\\Users\\hp\\.gradle\\caches\\8.13\\transforms\\26e1d51dd75c170545f49b2220f90856\\transformed\\material-1.9.0\\res\\values-night-v8\\values-night-v8.xml",
+                    "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\caches\\8.13\\transforms\\317969cf19b1961779b2bb4b1fee8a74\\transformed\\material-1.9.0\\res\\values-night-v8\\values-night-v8.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -38,13 +31,20 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\hp\\.gradle\\caches\\8.13\\transforms\\ffe2877feb571cabfcd5a701257b1b6d\\transformed\\core-splashscreen-1.0.0\\res\\values-night-v8\\values-night-v8.xml",
+                    "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\caches\\8.13\\transforms\\e9e4b50a9c14fb5ac489f3f04d867bb3\\transformed\\appcompat-1.6.1\\res\\values-night-v8\\values-night-v8.xml",
                     "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "85",
-                        "endOffsets": "136"
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,125,209,293,389,491,593,687",
+                        "endColumns": "69,83,83,95,101,101,93,88",
+                        "endOffsets": "120,204,288,384,486,588,682,771"
+                    },
+                    "to": {
+                        "startLines": "3,4,5,6,7,8,9,35",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "141,211,295,379,475,577,679,3534",
+                        "endColumns": "69,83,83,95,101,101,93,88",
+                        "endOffsets": "206,290,374,470,572,674,768,3618"
                     }
                 }
             ]

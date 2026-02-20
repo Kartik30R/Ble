@@ -8,7 +8,14 @@ import com.blesense.app.features.bluetooth.presentation.viewmodel.BluetoothScanV
  import com.blesense.app.features.bluetooth.data.datasource.AndroidBleScanner
 
 object BluetoothModule {
-     private val scanner by lazy { AndroidBleScanner() }
+
+    private lateinit var appContext: android.content.Context
+
+    fun init(context: android.content.Context) {
+        appContext = context.applicationContext
+    }
+
+    private val scanner by lazy { AndroidBleScanner(appContext) }
     private val historyStore by lazy { InMemoryHistoryStore() }
     private val parserRouter by lazy {
         SensorParserRouter(

@@ -27,6 +27,6 @@
       applicationId="com.blesense.app"
       generatedSourceFolders="build\generated\ap_generated_sources\release\out;build\generated\source\buildConfig\release"
       generatedResourceFolders="build\generated\res\processReleaseGoogleServices;build\generated\res\resValues\release"
-      desugaredMethodsFiles="C:\Users\DELL\.gradle\caches\8.13\transforms\320e6ecbdbb4c366d875b4a648a1cb54\transformed\D8BackportedDesugaredMethods.txt">
+      desugaredMethodsFiles="C:\Users\hp\.gradle\caches\8.13\transforms\f7190d793047de1b1c8e82095f030ef7\transformed\D8BackportedDesugaredMethods.txt">
   </artifact>
 </variant>

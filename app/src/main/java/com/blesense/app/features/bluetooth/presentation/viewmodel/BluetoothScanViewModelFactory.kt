@@ -16,7 +16,9 @@ class BluetoothScanViewModelFactory(
     private val observeTempLoggerHistory: ObserveTempLoggerHistoryUseCase,
     private val observeLatestTempLogger: ObserveLatestTempLoggerUseCase,
     private val addSensorPacket: AddSensorPacketUseCase,
-    private val getDeviceHistory: GetDeviceHistoryUseCase
+    private val getDeviceHistory: GetDeviceHistoryUseCase,
+    private val sendBleCommand: SendBleCommandUseCase,
+    private val stopBleAdvertising: StopBleAdvertisingUseCase
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -33,7 +35,10 @@ class BluetoothScanViewModelFactory(
                 observeTempLoggerHistory = observeTempLoggerHistory,
                 observeLatestTempLogger = observeLatestTempLogger,
                 addSensorPacket = addSensorPacket,
-                getDeviceHistoryUseCase = getDeviceHistory
+                getDeviceHistoryUseCase = getDeviceHistory,
+                sendBleCommand = sendBleCommand,
+                stopBleAdvertising = stopBleAdvertising
+
 
             ) as T
         }

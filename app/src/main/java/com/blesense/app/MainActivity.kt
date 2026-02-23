@@ -20,6 +20,10 @@ class MainActivity : ComponentActivity() {
     // Called when the activity is created
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView)
+            ?.isAppearanceLightStatusBars = true   // dark icons
         // Prevent activity recreation on orientation changes for Android O and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED

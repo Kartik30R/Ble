@@ -102,6 +102,8 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
     // ==================== OTHER UTILITIES ====================
     implementation("androidx.core:core-splashscreen:1.0.0")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.10")

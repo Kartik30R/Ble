@@ -21,6 +21,8 @@ class BluetoothScanViewModel(
     private val observeLatestTempLogger: ObserveLatestTempLoggerUseCase,
     private val addSensorPacket: AddSensorPacketUseCase,
     private val getDeviceHistoryUseCase: GetDeviceHistoryUseCase,
+    private val sendBleCommand: SendBleCommandUseCase,
+    private val stopBleAdvertising: StopBleAdvertisingUseCase,
 ) : ViewModel() {
 
     /* ---------- STATE ---------- */
@@ -75,5 +77,26 @@ class BluetoothScanViewModel(
 
     fun getDeviceHistory(deviceAddress: String): List<HistoricalDataEntry> {
         return getDeviceHistoryUseCase(deviceAddress)
+    }
+
+    fun requestDataLoggerDownload() {
+
+        sendBleCommand(
+            byteArrayOf(0xBB.toByte(), 0xCC.toByte()),
+            40000
+        )
+    }
+
+    fun requestReset() {
+
+        sendBleCommand(
+            byteArrayOf(0xFF.toByte(), 0xFF.toByte()),
+            40000
+        )
+    }
+
+    fun stopAdvertising() {
+
+        stopBleAdvertising()
     }
 }

@@ -78,6 +78,8 @@ fun AdvertisingDataScreen(
     val currentDevice by remember(devices, deviceAddress) {
         derivedStateOf { devices.find { it.address == deviceAddress } }
     }
+    val showGraphButton =
+        currentDevice?.sensorData !is SensorData.SoilSensorData
 
     // Threshold & Alarm States
     var thresholdValue by remember { mutableStateOf("") }
@@ -206,99 +208,172 @@ fun AdvertisingDataScreen(
         Brush.verticalGradient(listOf(Color(0xFF0A74DA), Color(0xFFADD8E6)))
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(backgroundBrush)) {
-        // Alarm Overlay
-        if (isAlarmActive) {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Red.copy(alpha = blinkAlpha)))
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Header Reusable
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
             HeaderSection(
                 navController = navController,
                 viewModel = viewModel,
                 deviceAddress = deviceAddress,
-                 textColor = Color.White
+                showGraphButton = showGraphButton
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Device Info Reusable
-            DeviceInfoSection(
-                deviceName = deviceName,
-                deviceAddress = deviceAddress,
-                deviceId = deviceId,
-
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // DataLogger Special View
-            if (currentDevice?.sensorData is SensorData.DataLoggerData) {
-         DataLoggerDisplay(viewModel = viewModel)
+        },
+        bottomBar = {
+            Surface(
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                ) {
+                    DownloadButton(
+                        viewModel = viewModel,
+                        deviceAddress = deviceAddress,
+                        deviceName = deviceName,
+                        deviceId = deviceId
+                    )
+                }
             }
-
-            // Sensor Readings Cards
-            ResponsiveDataCards(
-                data = displayData,
-
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // TempLogger History View
-            if (currentDevice?.sensorData is SensorData.TempLoggerData) {
-                TempLoggerDisplay(
-                    viewModel = viewModel,
-                    deviceAddress = deviceAddress,
-                    deviceId = deviceId,
-                    deviceName = deviceName
-                )
-            }
-
-            // Threshold Controls
-            if (currentDevice?.sensorData is SensorData.SHT40Data ||
-                currentDevice?.sensorData is SensorData.AmmoniaSensorData) {
-                ThresholdInputSection(
-                    thresholdValue = thresholdValue,
-                    onThresholdChange = { thresholdValue = it },
-                    parameterType = parameterType,
-                    onParameterChange = { parameterType = it },
-                     sensorData = currentDevice?.sensorData,
-                    onConfirmThreshold = { isThresholdSet = true }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Download Button
-            DownloadButton(
-                viewModel = viewModel,
-                deviceAddress = deviceAddress,
-                deviceName = deviceName,
-                deviceId = deviceId
-             )
         }
+    ) { paddingValues ->
 
-        // Alarm Dialog
-        if (showAlertDialog) {
-            AlertDialog(
-                onDismissRequest = { isThresholdSet = false; showAlertDialog = false },
-                title = { Text(AppStrings.WARNING_TITLE) },
-                text = { Text(AppStrings.WARNING_MESSAGE.format(parameterType, thresholdValue)) },
-                confirmButton = {
-                    TextButton(onClick = { isThresholdSet = false; showAlertDialog = false }) {
-                        Text(AppStrings.DISMISS)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+
+            // Alarm Overlay (unchanged logic)
+            if (isAlarmActive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            MaterialTheme.colorScheme.error.copy(alpha = blinkAlpha)
+                        )
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+
+
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(Modifier.padding(20.dp)) {
+                        DeviceInfoSection(
+                            deviceName = deviceName,
+                            deviceAddress = deviceAddress,
+                            deviceId = deviceId,
+                        )
                     }
                 }
-            )
+
+                // DataLogger Section
+                if (currentDevice?.sensorData is SensorData.DataLoggerData) {
+                    ElevatedCard(
+                        shape = MaterialTheme.shapes.extraLarge
+                    ) {
+                        Column(Modifier.padding(20.dp)) {
+                            DataLoggerDisplay(viewModel = viewModel)
+                        }
+                    }
+                }
+
+                // Sensor Data Section
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(Modifier.padding(20.dp)) {
+                        ResponsiveDataCards(
+                            data = displayData,
+                        )
+                    }
+                }
+
+                // TempLogger Section
+                if (currentDevice?.sensorData is SensorData.TempLoggerData) {
+                    ElevatedCard(
+                        shape = MaterialTheme.shapes.extraLarge
+                    ) {
+                        Column(Modifier.padding(20.dp)) {
+                            TempLoggerDisplay(
+                                viewModel = viewModel,
+                                deviceAddress = deviceAddress,
+                                deviceId = deviceId,
+                                deviceName = deviceName
+                            )
+                        }
+                    }
+                }
+
+                // Threshold Section
+                if (currentDevice?.sensorData is SensorData.SHT40Data ||
+                    currentDevice?.sensorData is SensorData.AmmoniaSensorData) {
+
+                    ElevatedCard(
+                        shape = MaterialTheme.shapes.extraLarge
+                    ) {
+                        Column(Modifier.padding(20.dp)) {
+                            ThresholdInputSection(
+                                thresholdValue = thresholdValue,
+                                onThresholdChange = { thresholdValue = it },
+                                parameterType = parameterType,
+                                onParameterChange = { parameterType = it },
+                                sensorData = currentDevice?.sensorData,
+                                onConfirmThreshold = { isThresholdSet = true }
+                            )
+                        }
+                    }
+                }
+
+
+            }
+
+            // Alert Dialog (UNCHANGED LOGIC)
+            if (showAlertDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        isThresholdSet = false
+                        showAlertDialog = false
+                    },
+                    title = { Text(AppStrings.WARNING_TITLE) },
+                    text = {
+                        Text(
+                            AppStrings.WARNING_MESSAGE.format(
+                                parameterType,
+                                thresholdValue
+                            )
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                isThresholdSet = false
+                                showAlertDialog = false
+                            }
+                        ) {
+                            Text(AppStrings.DISMISS)
+                        }
+                    }
+                )
+            }
         }
     }
 }

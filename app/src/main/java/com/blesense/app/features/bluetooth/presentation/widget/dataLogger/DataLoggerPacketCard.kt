@@ -54,7 +54,7 @@ fun DataLoggerPacketCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -96,13 +96,13 @@ fun DataLoggerPacketCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 300.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .heightIn(max = 300.dp)
             ) {
-                itemsIndexed(accelPoints) { index, triple ->
+
+                accelPoints.forEachIndexed { index, triple ->
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -139,13 +139,14 @@ fun DataLoggerPacketCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 200.dp)
             ) {
-                val chunks = packet.rawData.chunked(64)
-                items(chunks) { chunk ->
+
+                packet.rawData.chunked(64).forEach { chunk ->
+
                     Text(
                         text = chunk,
                         style = MaterialTheme.typography.bodyMedium

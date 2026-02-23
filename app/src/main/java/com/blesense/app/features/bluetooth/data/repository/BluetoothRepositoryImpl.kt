@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.util.Log
 import com.blesense.app.features.bluetooth.data.datasource.AndroidBleScanner
+import com.blesense.app.features.bluetooth.data.datasourse.BleCommandSender
 import com.blesense.app.features.bluetooth.data.datasourse.InMemoryHistoryStore
 import com.blesense.app.features.bluetooth.data.parser.SensorParserRouter
 import com.blesense.app.features.bluetooth.domain.model.BleDevice
@@ -17,7 +18,9 @@ import kotlinx.coroutines.flow.*
 class BluetoothRepositoryImpl(
     private val scanner: AndroidBleScanner,
     private val parser: SensorParserRouter,
-    private val history: InMemoryHistoryStore
+    private val history: InMemoryHistoryStore,
+    private val commandSender: BleCommandSender
+
 ) : BluetoothRepository {
 
     // Main Device List and Status
@@ -34,7 +37,9 @@ class BluetoothRepositoryImpl(
     init {
         scanner.results
             .onEach { result ->
-
+                scanner.results.collect {
+                    Log.d("TEST", "scan received")
+                }
                 val deviceAddress = result.device.address
                 val advName = result.scanRecord?.deviceName
                 val deviceName = result.device.name
@@ -62,7 +67,7 @@ class BluetoothRepositoryImpl(
                 }
 
                 val parsed = parser.parse(result)
-
+                Log.d("TEST", "parsed packetId=${parsed.toString()}")
                 val device = BleDevice(
                     name = finalName,
                     address = deviceAddress,
@@ -81,8 +86,9 @@ class BluetoothRepositoryImpl(
                             timestamp = System.currentTimeMillis(),
                             sensorData = parsed
                         )
-                    )
 
+                    )
+                    Log.d("TEST", "history size=${_dataLoggerHistory.value.size}")
                     when (parsed) {
 
                         is SensorData.DataLoggerData -> {
@@ -165,5 +171,17 @@ class BluetoothRepositoryImpl(
         _latestTempLogger.value = emptyMap()
         _latestPacketId.value = -1
         history.clearAll()
+    }
+
+
+    override fun sendCommand(
+        command: ByteArray,
+        durationMs: Long
+    ) {
+        commandSender.sendCommand(command, durationMs)
+    }
+
+    override fun stopAdvertising() {
+        commandSender.stopAdvertising()
     }
 }

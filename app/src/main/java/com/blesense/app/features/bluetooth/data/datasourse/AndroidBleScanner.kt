@@ -49,6 +49,7 @@ class AndroidBleScanner(private val context: Context) {
         }
 
         if (_isScanning.value) return
+        if (callback != null) return
 
         val bluetoothManager =
             context.getSystemService(BluetoothManager::class.java)
@@ -67,15 +68,6 @@ class AndroidBleScanner(private val context: Context) {
 
             override fun onScanResult(callbackType: Int, result: ScanResult) {
 
-                Log.d("SCAN_DEBUG", "---- RAW SCAN ----")
-                Log.d("SCAN_DEBUG", "Device: ${result.device.address}")
-                Log.d("SCAN_DEBUG", "DeviceName: ${result.device.name}")
-                Log.d("SCAN_DEBUG", "AdvName: ${result.scanRecord?.deviceName}")
-                Log.d("SCAN_DEBUG", "ScanRecord: ${result.scanRecord}")
-                Log.d(
-                    "SCAN_DEBUG",
-                    "ManufacturerData size: ${result.scanRecord?.manufacturerSpecificData?.size()}"
-                )
 
                 scope.launch {
                     _results.emit(result)

@@ -11,10 +11,10 @@ INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:36:9-44:20
 	android:name
 		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:37:13-62
 manifest
-ADDED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-64:12
-INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-64:12
-INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-64:12
-INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-64:12
+ADDED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-66:12
+INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-66:12
+INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-66:12
+INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:2:1-66:12
 MERGED from [com.google.accompanist:accompanist-navigation-animation:0.30.1] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\e8ba11de40748017ce2225090744aa65\transformed\accompanist-navigation-animation-0.30.1\AndroidManifest.xml:17:1-25:12
 MERGED from [androidx.navigation:navigation-common:2.7.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\d2a571a6bb685279cddf5a8e9e7c9e5e\transformed\navigation-common-2.7.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-runtime:2.7.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\9cdba902b16b26b8243b6130cce05d64\transformed\navigation-runtime-2.7.0\AndroidManifest.xml:17:1-22:12
@@ -121,6 +121,7 @@ MERGED from [androidx.activity:activity-compose:1.9.3] C:\Users\hp\AppData\Local
 MERGED from [androidx.compose.ui:ui-android:1.10.3] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\d91e10f2990fdc88b7243e3e449f9d1b\transformed\ui\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-test-manifest:1.10.3] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\2d61d7ff304f0603de2ac79e76b5e3b6\transformed\ui-test-manifest-1.10.3\AndroidManifest.xml:17:1-29:12
 MERGED from [androidx.compose.ui:ui-graphics-android:1.10.3] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\abd1ffb8ddf7742daf5b9eedf24432bc\transformed\ui-graphics\AndroidManifest.xml:2:1-7:12
+MERGED from [com.github.PhilJay:MPAndroidChart:v3.1.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\546c1c805f3e02a104858fdcf7cd0bfd\transformed\MPAndroidChart-v3.1.0\AndroidManifest.xml:2:1-20:12
 MERGED from [androidx.core:core-splashscreen:1.0.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\5d77a97de695bfb84ad31a366b2cfc8e\transformed\core-splashscreen-1.0.0\AndroidManifest.xml:17:1-24:12
 MERGED from [com.google.android.libraries.identity.googleid:googleid:1.1.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\f060025fccfe5769cf6955d08e95e0aa\transformed\googleid-1.1.0\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.annotation:annotation-experimental:1.4.1] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\1d585f1b62e14f27e1fc86e9cfdfe1be\transformed\annotation-experimental-1.4.1\AndroidManifest.xml:2:1-7:12
@@ -210,8 +211,8 @@ ADDED from D:\Ble\app\src\main\AndroidManifest.xml:15:5-108
 	android:name
 		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:15:22-78
 application
-ADDED from D:\Ble\app\src\main\AndroidManifest.xml:17:5-63:19
-INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:17:5-63:19
+ADDED from D:\Ble\app\src\main\AndroidManifest.xml:17:5-65:19
+INJECTED from D:\Ble\app\src\main\AndroidManifest.xml:17:5-65:19
 MERGED from [com.google.android.material:material:1.9.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\317969cf19b1961779b2bb4b1fee8a74\transformed\material-1.9.0\AndroidManifest.xml:24:5-20
 MERGED from [com.google.android.material:material:1.9.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\317969cf19b1961779b2bb4b1fee8a74\transformed\material-1.9.0\AndroidManifest.xml:24:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\eecf154d94fe930751a50df4668bf701\transformed\constraintlayout-2.0.1\AndroidManifest.xml:9:5-20
@@ -309,37 +310,37 @@ MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\hp\A
 	android:name
 		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:33:13-58
 activity#com.blesense.app.MainActivity
-ADDED from D:\Ble\app\src\main\AndroidManifest.xml:46:9-55:20
+ADDED from D:\Ble\app\src\main\AndroidManifest.xml:48:9-57:20
 	android:label
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:49:13-45
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:51:13-45
 	android:exported
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:48:13-36
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:50:13-36
 	android:theme
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:50:13-59
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:52:13-59
 	android:name
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:47:13-41
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:49:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from D:\Ble\app\src\main\AndroidManifest.xml:51:13-54:29
+ADDED from D:\Ble\app\src\main\AndroidManifest.xml:53:13-56:29
 action#android.intent.action.MAIN
-ADDED from D:\Ble\app\src\main\AndroidManifest.xml:52:17-69
+ADDED from D:\Ble\app\src\main\AndroidManifest.xml:54:17-69
 	android:name
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:52:25-66
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:54:25-66
 category#android.intent.category.LAUNCHER
-ADDED from D:\Ble\app\src\main\AndroidManifest.xml:53:17-77
+ADDED from D:\Ble\app\src\main\AndroidManifest.xml:55:17-77
 	android:name
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:53:27-74
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:55:27-74
 activity#com.blesense.app.features.remote.RobotControlCompose
-ADDED from D:\Ble\app\src\main\AndroidManifest.xml:57:9-62:45
+ADDED from D:\Ble\app\src\main\AndroidManifest.xml:59:9-64:45
 	android:screenOrientation
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:60:13-50
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:62:13-50
 	android:exported
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:59:13-37
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:61:13-37
 	tools:ignore
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:62:13-42
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:64:13-42
 	android:configChanges
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:61:13-59
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:63:13-59
 	android:name
-		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:58:13-64
+		ADDED from D:\Ble\app\src\main\AndroidManifest.xml:60:13-64
 meta-data#android.support.FILE_PROVIDER_PATHS
 ADDED from D:\Ble\app\src\main\AndroidManifest.xml:41:13-43:58
 	android:resource
@@ -562,6 +563,8 @@ MERGED from [androidx.compose.ui:ui-test-manifest:1.10.3] C:\Users\hp\AppData\Lo
 MERGED from [androidx.compose.ui:ui-test-manifest:1.10.3] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\2d61d7ff304f0603de2ac79e76b5e3b6\transformed\ui-test-manifest-1.10.3\AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.ui:ui-graphics-android:1.10.3] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\abd1ffb8ddf7742daf5b9eedf24432bc\transformed\ui-graphics\AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-graphics-android:1.10.3] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\abd1ffb8ddf7742daf5b9eedf24432bc\transformed\ui-graphics\AndroidManifest.xml:5:5-44
+MERGED from [com.github.PhilJay:MPAndroidChart:v3.1.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\546c1c805f3e02a104858fdcf7cd0bfd\transformed\MPAndroidChart-v3.1.0\AndroidManifest.xml:16:5-18:41
+MERGED from [com.github.PhilJay:MPAndroidChart:v3.1.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\546c1c805f3e02a104858fdcf7cd0bfd\transformed\MPAndroidChart-v3.1.0\AndroidManifest.xml:16:5-18:41
 MERGED from [androidx.core:core-splashscreen:1.0.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\5d77a97de695bfb84ad31a366b2cfc8e\transformed\core-splashscreen-1.0.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.core:core-splashscreen:1.0.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\5d77a97de695bfb84ad31a366b2cfc8e\transformed\core-splashscreen-1.0.0\AndroidManifest.xml:20:5-22:41
 MERGED from [com.google.android.libraries.identity.googleid:googleid:1.1.0] C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\f060025fccfe5769cf6955d08e95e0aa\transformed\googleid-1.1.0\AndroidManifest.xml:5:5-44

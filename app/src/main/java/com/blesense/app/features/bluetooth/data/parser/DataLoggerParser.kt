@@ -6,36 +6,44 @@ import com.blesense.app.features.bluetooth.domain.model.SensorData
 class DataLoggerParser : SensorParser {
 
     private var dumpBaseTime: Long? = null
-
     override fun parse(result: ScanResult): SensorData? {
-        val data = result.scanRecord?.manufacturerSpecificData?.valueAt(0) ?: return null
-        if (data.size < 244) return null
 
-        val size = data.size
-        val lastPacketId =
-            (data[size - 5].toInt() and 0xFF) or ((data[size - 4].toInt() and 0xFF) shl 8)
-        val totalPackets =
-            (data[size - 3].toInt() and 0xFF) or ((data[size - 2].toInt() and 0xFF) shl 8)
+        val raw = result.scanRecord
+            ?.manufacturerSpecificData
+            ?.valueAt(0)
+            ?: return null
 
-        if (dumpBaseTime == null) dumpBaseTime = System.currentTimeMillis()
+        val requiredSize = 234
 
-        val packetAge = (totalPackets - lastPacketId) * 60_000L
-        val timestamp = dumpBaseTime!! - packetAge
-
-        val accel = mutableListOf<Triple<Int, Int, Int>>()
-        var i = 0
-        while (i + 2 < 240) {
-            accel.add(Triple(data[i++].toInt(), data[i++].toInt(), data[i++].toInt()))
+        val data = when {
+            raw.size < requiredSize ->
+                raw + ByteArray(requiredSize - raw.size)
+            raw.size > requiredSize ->
+                raw.copyOf(requiredSize)
+            else -> raw
         }
 
-        if (lastPacketId == 1) dumpBaseTime = null
+        val deviceId = data[231].toInt() and 0xFF
+
+        val accel = mutableListOf<Triple<Int,Int,Int>>()
+
+        var i = 0
+        while (i + 2 < 231) {
+            accel.add(
+                Triple(
+                    data[i++].toInt() and 0xFF,
+                    data[i++].toInt() and 0xFF,
+                    data[i++].toInt() and 0xFF
+                )
+            )
+        }
 
         return SensorData.DataLoggerData(
-            deviceId = "1",
-            currentPacketId = totalPackets,
-            lastPacketId = lastPacketId,
+            deviceId = deviceId.toString(),
+            currentPacketId = deviceId,
+            lastPacketId = deviceId,
             payloadAccel = accel,
-            timestamp = timestamp,
+            timestamp = System.currentTimeMillis(),
             rawData = data.joinToString(" ") { "%02X".format(it) }
         )
     }

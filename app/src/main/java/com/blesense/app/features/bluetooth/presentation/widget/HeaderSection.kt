@@ -17,58 +17,55 @@ import androidx.navigation.NavController
 import com.blesense.app.R
 import com.blesense.app.coreui.constants.AppStrings
 import presentation.viewmodel.BluetoothScanViewModel
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeaderSection(
     navController: NavController,
     viewModel: BluetoothScanViewModel,
     deviceAddress: String,
-    textColor: Color
+    showGraphButton: Boolean   // ← add this
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Back button - triggers ViewModel cleanup and pops stack
-        IconButton(
-            onClick = {
-                viewModel.stopScan()
-                navController.popBackStack()
-            }
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = textColor,
-                modifier = Modifier.size(28.dp)
-            )
-        }
 
-        // Screen title using AppStrings
-        Text(
-            text = AppStrings.ADVERTISING_DATA_TITLE,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = textColor,
-            style = MaterialTheme.typography.headlineMedium
-        )
+    CenterAlignedTopAppBar(
 
-        // Chart navigation button
-        IconButton(
-            onClick = {
-                val encoded = Uri.encode(deviceAddress)
-                navController.navigate("chart_screen/$encoded")
-            }
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.graph),
-                contentDescription = "Graph Icon",
-                modifier = Modifier.size(32.dp),
-                tint = textColor
+        title = {
+            Text(
+                text = AppStrings.ADVERTISING_DATA_TITLE,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge
             )
+        },
+
+        navigationIcon = {
+            IconButton(
+                onClick = {
+                    viewModel.stopScan()
+                    navController.popBackStack()
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back"
+                )
+            }
+        },
+
+        actions = {
+
+            if (showGraphButton) {   // ← condition here
+
+                IconButton(
+                    onClick = {
+                        val encoded = Uri.encode(deviceAddress)
+                        navController.navigate("chart_screen/$encoded")
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.graph),
+                        contentDescription = "Graph"
+                    )
+                }
+            }
         }
-    }
+    )
 }

@@ -23,6 +23,7 @@ import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModelFactory
 import com.blesense.app.features.auth.presentation.screen.RegisterScreen
 import com.blesense.app.features.bluetooth.presentation.screens.dataLogger.DataLoggerScreen
+import com.blesense.app.features.bluetooth.presentation.screens.graph.ChartScreen
 import com.blesense.app.features.remote.RobotControlScreen
 import com.blesense.app.features.settings.presentation.screens.ModernSettingsScreen
 import presentation.viewmodel.BluetoothScanViewModel
@@ -217,22 +218,40 @@ fun AppNavigation(navController: NavHostController) {
         }
 
         // -------- Charts --------
+//        composable(
+//            route = "chart_screen/{deviceAddress}",
+//            arguments = listOf(
+//                navArgument("deviceAddress") { type = NavType.StringType }
+//            )
+//        )
+//        { backStackEntry ->
+//            val encodedAddress = backStackEntry.arguments?.getString("deviceAddress")
+//            val deviceAddress = encodedAddress?.let { Uri.decode(it) }
+//            ChartScreen(
+//                navController = navController,
+//                deviceAddress = deviceAddress,
+//                viewModel = bluetoothViewModel
+//            )
+//        }
         composable(
-            route = "chart_screen/{deviceAddress}",
+            route = Routes.CHART,
             arguments = listOf(
                 navArgument("deviceAddress") { type = NavType.StringType }
             )
-        )
-        { backStackEntry ->
-            val encodedAddress = backStackEntry.arguments?.getString("deviceAddress")
-            val deviceAddress = encodedAddress?.let { Uri.decode(it) }
-            ChartScreen(
+        ) { backStackEntry ->
+
+            val encodedAddress =
+                backStackEntry.arguments?.getString("deviceAddress")
+
+            val deviceAddress =
+                encodedAddress?.let { Uri.decode(it) }
+
+             ChartScreen(
                 navController = navController,
                 deviceAddress = deviceAddress,
-                viewModel = bluetoothViewModel   // SAME instance
+                viewModel = bluetoothViewModel
             )
         }
-
 
 
         composable(

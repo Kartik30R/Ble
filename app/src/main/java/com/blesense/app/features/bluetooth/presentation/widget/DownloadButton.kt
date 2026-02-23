@@ -1,8 +1,10 @@
 package com.blesense.app.features.bluetooth.presentation.widget
 
 import android.content.Context
+import android.content.Intent
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.blesense.app.coreui.constants.AppStrings
 import com.blesense.app.features.bluetooth.domain.model.HistoricalDataEntry
 import com.blesense.app.features.bluetooth.domain.model.SensorData
@@ -21,6 +24,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import presentation.viewmodel.BluetoothScanViewModel
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,153 +35,458 @@ fun DownloadButton(
     deviceName: String,
     deviceId: String
 ) {
+
     val context = LocalContext.current
     var isExporting by remember { mutableStateOf(false) }
 
-    // Launcher for selecting a location to save the CSV
-    val createDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("text/csv")
-    ) { uri: Uri? ->
-        if (uri != null) {
+    val createDocumentLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/pdf")
+        ) { uri: Uri? ->
+
+            if (uri == null) return@rememberLauncherForActivityResult
+
             isExporting = true
-            // Call your existing export function
-            exportDataToCSV(
-                context = context,
-                uri = uri,
-                viewModel = viewModel,
-                deviceAddress = deviceAddress,
-                deviceName = deviceName,
-                deviceId = deviceId
-            ) {
+
+            MainScope().launch {
+
+                withContext(Dispatchers.IO) {
+
+                    try {
+
+                        context.contentResolver
+                            .openOutputStream(uri)
+                            ?.use { out ->
+
+                                val tempFile =
+                                    File(
+                                        context.cacheDir,
+                                        "temp_export.pdf"
+                                    )
+
+                                generatePDFFile(
+                                    tempFile,
+                                    viewModel,
+                                    deviceAddress,
+                                    deviceName,
+                                    deviceId
+                                )
+
+                                tempFile.inputStream().copyTo(out)
+                            }
+
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
                 isExporting = false
-                Toast.makeText(context, "Data Exported Successfully", Toast.LENGTH_SHORT).show()
             }
         }
-    }
 
-    Button(
-        onClick = {
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val filename = "BLE_Sense_${deviceId}_$timestamp.csv"
-            createDocumentLauncher.launch(filename)
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp) // Standard Material 3 button height
-            .padding(vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        enabled = !isExporting,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledContentColor = MaterialTheme.colorScheme.outline
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-    ) {
-        if (isExporting) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                color = MaterialTheme.colorScheme.onPrimary,
-                strokeWidth = 2.dp
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = AppStrings.EXPORTING_DATA,
-                style = MaterialTheme.typography.labelLarge
-            )
-        } else {
-            Text(
-                text = AppStrings.DOWNLOAD_DATA,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.25.sp
-            )
+
+    Column {
+
+        // PREVIEW BUTTON
+        Button(
+
+            onClick = {
+
+                isExporting = true
+
+                exportAndPreviewPDF(
+                    context,
+                    viewModel,
+                    deviceAddress,
+                    deviceName,
+                    deviceId
+                ) {
+                    isExporting = false
+                }
+            },
+
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+
+        ) {
+
+            Text("Preview")
+        }
+
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+
+        // DOWNLOAD BUTTON
+        Button(
+
+            onClick = {
+
+                val timestamp =
+                    SimpleDateFormat(
+                        "yyyyMMdd_HHmmss",
+                        Locale.getDefault()
+                    ).format(Date())
+
+                val safeName =
+                    deviceName.replace(
+                        "[^A-Za-z0-9_]".toRegex(),
+                        "_"
+                    )
+
+                val fileName =
+                    "${safeName}_$timestamp.pdf"
+
+                createDocumentLauncher.launch(fileName)
+            },
+
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+
+            enabled = !isExporting
+        ) {
+
+            if (isExporting) {
+
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp)
+                )
+
+            } else {
+
+                Text(
+                    "Download",
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
 
-fun exportDataToCSV(
+
+fun exportAndPreviewPDF(
     context: Context,
-    uri: Uri,
     viewModel: BluetoothScanViewModel,
     deviceAddress: String,
     deviceName: String,
     deviceId: String,
     onComplete: () -> Unit
 ) {
+
     MainScope().launch {
+
         withContext(Dispatchers.IO) {
+
             try {
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    // 1. Get historical data using the correct UseCase-backed method
-                    val historicalData = viewModel.getDeviceHistory(deviceAddress).toMutableList()
 
-                    // 2. Add current live data if no history exists
-                    if (historicalData.isEmpty()) {
-                        val currentDevice = viewModel.devices.value.find { it.address == deviceAddress }
-                        currentDevice?.sensorData?.let { liveSensorData ->
-                            historicalData.add(
-                                HistoricalDataEntry(
-                                    timestamp = System.currentTimeMillis(),
-                                    sensorData = liveSensorData
-                                )
-                            )
-                        }
+                val safeName =
+                    deviceName.replace("[^A-Za-z0-9_]".toRegex(), "_")
+
+                val file =
+                    File(
+                        context.cacheDir,
+                        "${safeName}_report.pdf"
+                    )
+
+//                if (file.exists()) file.delete()
+
+
+                generatePDFFile(
+                    file,
+                    viewModel,
+                    deviceAddress,
+                    deviceName,
+                    deviceId
+                )
+
+
+                val uri =
+                    FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        file
+                    )
+
+
+                val intent =
+                    Intent(Intent.ACTION_VIEW).apply {
+
+                        setDataAndType(uri, "application/pdf")
+
+                        flags =
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_ACTIVITY_NEW_TASK
                     }
 
-                    if (historicalData.isEmpty()) return@use
 
-                    // 3. Build CSV Header based on SensorData type
-                    val headerBuilder = StringBuilder()
-                    headerBuilder.append("Timestamp,Device Name,Device Address,Node ID,")
+                context.startActivity(
+                    Intent.createChooser(intent, "Open PDF")
+                )
 
-                    val firstEntry = historicalData.first().sensorData
-                    when (firstEntry) {
-                        is SensorData.SHT40Data -> headerBuilder.append("Temperature (°C),Humidity (%)")
-                        is SensorData.SoilSensorData -> headerBuilder.append("Nitrogen (mg/kg),Phosphorus (mg/kg),Potassium (mg/kg),Moisture (%),Temperature (°C),EC (mS/cm),pH,Salinity (mg/L)")
-                        is SensorData.AmmoniaSensorData -> headerBuilder.append("Ammonia (ppm),Raw Data")
-                        is SensorData.LIS2DHData -> headerBuilder.append("X-Axis (m/s²),Y-Axis (m/s²),Z-Axis (m/s²)")
-                        is SensorData.LuxSensorData -> headerBuilder.append("Light Intensity (LUX)")
-                        is SensorData.SDTData -> headerBuilder.append("Speed (m/s),Distance (m)")
-                        is SensorData.TempLoggerData -> headerBuilder.append("Log Temp (°C),Log Humidity (%)")
-                        is SensorData.DataLoggerData -> headerBuilder.append("Packet ID,Total Packets,Accel Points,Hex Data")
-                        null -> TODO()
-                    }
-                    headerBuilder.append("\n")
-                    outputStream.write(headerBuilder.toString().toByteArray())
+            }
+            catch (e: Exception) {
 
-                    // 4. Write Data Rows
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-
-                    historicalData.forEachIndexed { index, entry ->
-                        val dataBuilder = StringBuilder()
-                        dataBuilder.append("${dateFormat.format(Date(entry.timestamp))},$deviceName,$deviceAddress,$deviceId,")
-
-                        when (val data = entry.sensorData) {
-                            is SensorData.SHT40Data -> dataBuilder.append("${data.temperature},${data.humidity}")
-                            is SensorData.SoilSensorData -> dataBuilder.append("${data.nitrogen},${data.phosphorus},${data.potassium},${data.moisture},${data.temperature},${data.ec},${data.pH},${data.salinity}")
-                            is SensorData.AmmoniaSensorData -> dataBuilder.append("${data.ammonia},${data.rawData}")
-                            is SensorData.LIS2DHData -> dataBuilder.append("${data.x},${data.y},${data.z}")
-                            is SensorData.LuxSensorData -> dataBuilder.append("${data.lux}")
-                            is SensorData.SDTData -> dataBuilder.append("${data.speed},${data.distance}")
-                            is SensorData.TempLoggerData -> dataBuilder.append("${data.temperature},${data.humidity}")
-                            is SensorData.DataLoggerData -> dataBuilder.append("${data.lastPacketId},${data.currentPacketId},${data.payloadAccel.size},\"${data.rawData}\"")
-                            null -> TODO()
-                        }
-                        dataBuilder.append("\n")
-                        outputStream.write(dataBuilder.toString().toByteArray())
-
-                         if (index % 100 == 0) outputStream.flush()
-                    }
-                }
-            } catch (e: Exception) {
                 e.printStackTrace()
-            } finally {
-                withContext(Dispatchers.Main) {
-                    onComplete()
-                }
+            }
+
+            withContext(Dispatchers.Main) {
+
+                onComplete()
             }
         }
     }
 }
+
+fun generatePDFFile(
+    file: File,
+    viewModel: BluetoothScanViewModel,
+    deviceAddress: String,
+    deviceName: String,
+    deviceId: String
+) {
+
+    val history =
+        viewModel.getDeviceHistory(deviceAddress).toMutableList()
+
+    if (history.isEmpty()) {
+        viewModel.devices.value
+            .find { it.address == deviceAddress }
+            ?.sensorData
+            ?.let {
+                history.add(
+                    HistoricalDataEntry(
+                        System.currentTimeMillis(),
+                        it
+                    )
+                )
+            }
+    }
+
+
+    val sensorType = determineDeviceType(deviceName)
+
+    val pdf = PdfDocument()
+
+    val pageWidth = 595   // portrait A4
+    val pageHeight = 842
+
+    val margin = 40f
+    val rowHeight = 18f
+
+    val titlePaint = Paint().apply {
+        textSize = 18f
+        isFakeBoldText = true
+    }
+
+    val headerPaint = Paint().apply {
+        textSize = 10f
+        isFakeBoldText = true
+    }
+
+    val textPaint = Paint().apply {
+        textSize = 9f
+    }
+
+    val linePaint = Paint()
+
+    val df =
+        SimpleDateFormat(
+            "yy-MM-dd HH:mm:ss",
+            Locale.getDefault()
+        )
+
+
+    val columns = arrayOf(
+        "Time",
+        "N",
+        "P",
+        "K",
+        "M%",
+        "T°C",
+        "EC",
+        "pH",
+        "Sal"
+    )
+
+
+    val colWidths = floatArrayOf(
+        110f,
+        40f,
+        40f,
+        40f,
+        50f,
+        50f,
+        45f,
+        40f,
+        50f
+    )
+
+    var pageNumber = 1
+    var y = margin
+
+    var pageInfo =
+        PdfDocument.PageInfo.Builder(
+            pageWidth,
+            pageHeight,
+            pageNumber
+        ).create()
+
+    var page = pdf.startPage(pageInfo)
+    var canvas = page.canvas
+
+    fun drawHeader() {
+
+        y = margin
+
+        canvas.drawText(
+            "$sensorType REPORT",
+            margin,
+            y,
+            titlePaint
+        )
+
+        y += 25
+
+        canvas.drawText(
+            "Device: $deviceName",
+            margin,
+            y,
+            textPaint
+        )
+
+        y += 15
+
+        canvas.drawText(
+            "Node: $deviceId",
+            margin,
+            y,
+            textPaint
+        )
+
+        y += 25
+
+
+        var x = margin
+
+        for (i in columns.indices) {
+
+            canvas.drawText(
+                columns[i],
+                x,
+                y,
+                headerPaint
+            )
+
+            canvas.drawLine(
+                x,
+                y + 4,
+                x + colWidths[i],
+                y + 4,
+                linePaint
+            )
+
+            x += colWidths[i]
+        }
+
+        y += rowHeight
+    }
+
+
+    drawHeader()
+
+
+    history.forEach { entry ->
+
+        if (y > pageHeight - margin) {
+
+            pdf.finishPage(page)
+
+            pageNumber++
+
+            pageInfo =
+                PdfDocument.PageInfo.Builder(
+                    pageWidth,
+                    pageHeight,
+                    pageNumber
+                ).create()
+
+            page = pdf.startPage(pageInfo)
+            canvas = page.canvas
+
+            drawHeader()
+        }
+
+
+        val soil =
+            entry.sensorData as? SensorData.SoilSensorData
+                ?: return@forEach
+
+
+        val values = arrayOf(
+
+            df.format(Date(entry.timestamp)),
+
+            soil.nitrogen,
+            soil.phosphorus,
+            soil.potassium,
+            soil.moisture,
+            soil.temperature,
+            soil.ec,
+            soil.pH,
+            soil.salinity
+        )
+
+
+        var x = margin
+
+        for (i in values.indices) {
+
+            val text =
+                values[i].take(14)   // prevents overflow
+
+            canvas.drawText(
+                text,
+                x,
+                y,
+                textPaint
+            )
+
+            x += colWidths[i]
+        }
+
+        y += rowHeight
+    }
+
+
+    pdf.finishPage(page)
+
+    file.outputStream().use {
+        pdf.writeTo(it)
+    }
+
+    pdf.close()
+}
+
+fun determineDeviceType(name: String?): String =
+    when {
+
+        name?.contains("SHT", true) == true ->
+            "SHT40"
+
+        name?.contains("Lux", true) == true ->
+            "Lux Sensor"
+
+        name?.contains("SOIL", true) == true ->
+            "Soil Sensor"
+
+        name?.contains("NH", true) == true ->
+            "Ammonia Sensor"
+
+        name?.contains("Activity", true) == true ->
+            "LIS2DH"
+
+        else ->
+            "Sensor"
+    }

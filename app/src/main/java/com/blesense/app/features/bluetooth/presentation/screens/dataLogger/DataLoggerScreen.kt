@@ -40,7 +40,7 @@ import com.blesense.app.features.bluetooth.presentation.widget.dataLogger.Dragga
 import presentation.viewmodel.BluetoothScanViewModel
 
  import kotlinx.coroutines.delay
-
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -139,7 +139,10 @@ fun DataLoggerScreen(
 
     val currentDevice by remember(devices, deviceAddress) {
         derivedStateOf {
-            devices.find { it.address == deviceAddress }
+            devices.find {
+                it.address == deviceAddress &&
+                        it.name.contains("DataLogger", true)
+            }
                 ?: devices.find {
                     it.name.contains("DataLogger", true) ||
                             it.name.contains("Data Logger", true)
@@ -194,6 +197,29 @@ fun DataLoggerScreen(
                         navController.popBackStack()
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (!isRefreshing) {
+                            coroutineScope.launch {
+                                isRefreshing = true
+                                viewModel.stopScan()
+                                delay(800)
+                                viewModel.startScan()
+                                delay(2000)
+                                isRefreshing = false
+                            }
+                        }
+                    }) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
                     }
                 }
             )

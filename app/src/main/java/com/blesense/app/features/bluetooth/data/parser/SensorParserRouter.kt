@@ -15,10 +15,13 @@ class SensorParserRouter(
     private val tempLogger: TempLoggerParser,
     private val dataLogger: DataLoggerParser
 ) {
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun parse(result: ScanResult): SensorData? {
 
-        val deviceName = result.device?.name ?: return null
-
+        val deviceName =
+            result.scanRecord?.deviceName
+                ?: result.device?.name
+                ?: return null
         val manufacturerData = result.scanRecord?.manufacturerSpecificData
             ?: return null
 

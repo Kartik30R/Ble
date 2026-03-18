@@ -1,9 +1,10 @@
 package com.blesense.app.features.bluetooth.data.parser
 
-import android.Manifest
+ import android.Manifest
 import android.bluetooth.le.ScanResult
 import androidx.annotation.RequiresPermission
 import com.blesense.app.features.bluetooth.domain.model.SensorData
+
 class SensorParserRouter(
     private val lux: LuxParser,
     private val ammonia: AmmoniaParser,

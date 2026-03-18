@@ -1,10 +1,13 @@
 package com.blesense.app.core.di
 
 import android.content.Context
+import com.blesense.app.core.network.BleWebSocketManager
+import com.blesense.app.core.network.RetrofitProvider
 import com.blesense.app.features.bluetooth.data.datasource.AndroidBleScanner
 import com.blesense.app.features.bluetooth.data.datasourse.InMemoryHistoryStore
 import com.blesense.app.features.bluetooth.data.datasourse.BleCommandSender
 import com.blesense.app.features.bluetooth.data.parser.*
+import com.blesense.app.features.bluetooth.data.remote.BleRemoteDataSource
 import com.blesense.app.features.bluetooth.data.repository.BluetoothRepositoryImpl
 import com.blesense.app.features.bluetooth.domain.usecase.*
 import com.blesense.app.features.bluetooth.presentation.viewmodel.BluetoothScanViewModelFactory
@@ -25,6 +28,10 @@ object BluetoothModule {
 
     private val historyStore by lazy {
         InMemoryHistoryStore()
+    }
+
+    private val remoteDataSource by lazy {
+        BleRemoteDataSource(RetrofitProvider.api)
     }
 
     private val commandSender by lazy {
@@ -51,8 +58,15 @@ object BluetoothModule {
             scanner = scanner,
             parser = parserRouter,
             history = historyStore,
-            commandSender = commandSender
+            commandSender = commandSender,
+            remote = remoteDataSource
         )
+    }
+
+    /* ---------- WebSocket ---------- */
+
+    private val webSocketManager by lazy {
+        BleWebSocketManager
     }
 
     /* ---------- Factory ---------- */
@@ -92,12 +106,13 @@ object BluetoothModule {
             getDeviceHistory =
                 GetDeviceHistoryUseCase(repository),
 
-
             sendBleCommand =
                 SendBleCommandUseCase(repository),
 
             stopBleAdvertising =
-                StopBleAdvertisingUseCase(repository)
+                StopBleAdvertisingUseCase(repository),
+
+            wsManager = webSocketManager
         )
     }
 }

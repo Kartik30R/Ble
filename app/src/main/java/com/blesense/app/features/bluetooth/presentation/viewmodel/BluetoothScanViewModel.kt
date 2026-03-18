@@ -1,14 +1,15 @@
 package presentation.viewmodel
 
-import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.blesense.app.features.bluetooth.domain.model.BleDevice
+ import com.blesense.app.core.network.BleWebSocketManager
+ import com.blesense.app.core.network.LiveStreamController
+ import com.blesense.app.features.bluetooth.domain.model.BleDevice
 import com.blesense.app.features.bluetooth.domain.model.HistoricalDataEntry
 import com.blesense.app.features.bluetooth.domain.model.SensorData
 import com.blesense.app.features.bluetooth.domain.usecase.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-
 class BluetoothScanViewModel(
     private val startBleScan: StartBleScanUseCase,
     private val stopBleScan: StopBleScanUseCase,
@@ -23,33 +24,57 @@ class BluetoothScanViewModel(
     private val getDeviceHistoryUseCase: GetDeviceHistoryUseCase,
     private val sendBleCommand: SendBleCommandUseCase,
     private val stopBleAdvertising: StopBleAdvertisingUseCase,
+    private val wsManager: BleWebSocketManager
 ) : ViewModel() {
+
 
     /* ---------- STATE ---------- */
 
     val isScanning: StateFlow<Boolean> =
         observeScanningStatus()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val devices: StateFlow<List<BleDevice>> =
         observeDevices()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val dataLoggerPacketHistory: StateFlow<List<SensorData.DataLoggerData>> =
         observeDataLoggerHistory()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val latestPacketId: StateFlow<Int> =
         observeLatestPacketId()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), -1)
 
     val tempLoggerPacketHistory: StateFlow<Map<String, List<SensorData.TempLoggerData>>> =
         observeTempLoggerHistory()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val latestTempLoggerPacket: StateFlow<Map<String, SensorData.TempLoggerData?>> =
         observeLatestTempLogger()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    /* ---------- WEBSOCKET ---------- */
+
+    fun connectWebSocket() {
+        wsManager.connect()
+    }
+
+    fun disconnectWebSocket() {
+        wsManager.disconnect()
+    }
+
+    /* ---------- LIVE STREAM CONTROL ---------- */
+
+    fun enableLiveStreaming() {
+        LiveStreamController.enableWebSocket()
+        wsManager.connect()
+    }
+
+    fun disableLiveStreaming() {
+        LiveStreamController.disableWebSocket()
+        wsManager.disconnect()
+    }
 
     /* ---------- ACTIONS ---------- */
 
@@ -80,7 +105,6 @@ class BluetoothScanViewModel(
     }
 
     fun requestDataLoggerDownload() {
-
         sendBleCommand(
             byteArrayOf(0xBB.toByte(), 0xCC.toByte()),
             40000
@@ -88,7 +112,6 @@ class BluetoothScanViewModel(
     }
 
     fun requestReset() {
-
         sendBleCommand(
             byteArrayOf(0xFF.toByte(), 0xFF.toByte()),
             40000
@@ -96,7 +119,6 @@ class BluetoothScanViewModel(
     }
 
     fun stopAdvertising() {
-
         stopBleAdvertising()
     }
 }

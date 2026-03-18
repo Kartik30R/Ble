@@ -1,49 +1,512 @@
+//package com.blesense.app.features.bluetooth.presentation.screens.dataLogger
+//
+//import android.Manifest
+//import android.annotation.SuppressLint
+//import android.app.Activity
+//import android.os.Build
+//import android.util.Log
+//
+//import androidx.activity.compose.rememberLauncherForActivityResult
+//import androidx.activity.result.contract.ActivityResultContracts
+//
+//import androidx.compose.foundation.layout.*
+//import androidx.compose.foundation.lazy.LazyColumn
+//import androidx.compose.foundation.lazy.itemsIndexed
+//import androidx.compose.foundation.lazy.rememberLazyListState
+//
+//import androidx.compose.material.icons.Icons
+//import androidx.compose.material.icons.automirrored.filled.ArrowBack
+//import androidx.compose.material.icons.filled.Refresh
+//
+//import androidx.compose.material3.*
+//
+//import androidx.compose.runtime.*
+//import androidx.compose.ui.Alignment
+//import androidx.compose.ui.Modifier
+//import androidx.compose.ui.platform.LocalContext
+//import androidx.compose.ui.unit.dp
+//
+//import androidx.navigation.NavController
+//
+//import com.blesense.app.core.permission.BluetoothPermissionManager
+//
+//import com.blesense.app.coreui.constants.AppStrings
+//import com.blesense.app.features.bluetooth.data.datasourse.BleCommandSender
+//import com.blesense.app.features.bluetooth.domain.model.BleDevice
+//import com.blesense.app.features.bluetooth.presentation.widget.dataLogger.DataLoggerPacketCard
+//import com.blesense.app.features.bluetooth.presentation.widget.dataLogger.DraggableScrollbar
+//
+//import presentation.viewmodel.BluetoothScanViewModel
+//
+//import kotlinx.coroutines.delay
+//import kotlinx.coroutines.launch
+//
+//
+//@OptIn(ExperimentalMaterial3Api::class)
+//@SuppressLint("MissingPermission")
+//@Composable
+//fun DataLoggerScreen(
+//    deviceAddress: String,
+//    deviceName: String,
+//    navController: NavController,
+//    deviceId: String,
+//    viewModel: BluetoothScanViewModel
+//) {
+//
+//    val TAG = "BLE_ADV"
+//
+//    val context = LocalContext.current
+//    val activity = context as? Activity ?: return
+//
+//    val coroutineScope = rememberCoroutineScope()
+//
+//    /* ---------------- Permission manager ---------------- */
+//
+//    lateinit var permissionManager: BluetoothPermissionManager
+//
+//    val permissionLauncher =
+//        rememberLauncherForActivityResult(
+//            ActivityResultContracts.RequestMultiplePermissions()
+//        ) { result ->
+//
+//            val granted = result.values.all { it }
+//
+//            Log.d(TAG, "Permission result = $granted")
+//
+//            permissionManager.onPermissionResult(granted) {
+//
+//                viewModel.startScan()
+//            }
+//        }
+//
+//    val bluetoothLauncher =
+//        rememberLauncherForActivityResult(
+//            ActivityResultContracts.StartActivityForResult()
+//        ) {
+//            permissionManager.onBluetoothResult {
+//                viewModel.startScan()
+//            }
+//        }
+//
+//    val locationLauncher =
+//        rememberLauncherForActivityResult(
+//            ActivityResultContracts.StartActivityForResult()
+//        ) {
+//            permissionManager.onLocationResult {
+//                viewModel.startScan()
+//            }
+//        }
+//
+//    permissionManager =
+//        remember {
+//
+//            BluetoothPermissionManager(
+//                activity,
+//                permissionLauncher,
+//                bluetoothLauncher,
+//                locationLauncher
+//            )
+//        }
+//
+//    val permissionState by permissionManager.state.collectAsState()
+//
+//    /* ---------------- Start scan ---------------- */
+//
+//    LaunchedEffect(Unit) {
+//
+//        permissionManager.ensureReady {
+//
+//            Log.d(TAG, "Permissions ready → startScan")
+//
+//            viewModel.startScan()
+//        }
+//    }
+//
+//
+//    /* ---------------- State ---------------- */
+//
+//    var connectedDevice by remember {
+//        mutableStateOf<BleDevice?>(null)
+//    }
+//
+//    var isRefreshing by remember {
+//        mutableStateOf(false)
+//    }
+//
+//    var isGettingData by remember {
+//        mutableStateOf(false)
+//    }
+//
+//    var isResetting by remember {
+//        mutableStateOf(false)
+//    }
+//
+//    var lastPacketCount by remember {
+//        mutableIntStateOf(0)
+//    }
+//
+//    val packetHistory by viewModel
+//        .dataLoggerPacketHistory
+//        .collectAsState()
+//
+//    val devices by viewModel
+//        .devices
+//        .collectAsState()
+//
+//    val isScanning by viewModel
+//        .isScanning
+//        .collectAsState()
+//
+//    /* ---------------- Device detection ---------------- */
+//
+//    val currentDevice by remember(devices, deviceAddress) {
+//
+//        derivedStateOf {
+//
+//            devices.find {
+//
+//                it.address == deviceAddress &&
+//                        it.name.contains("DataLogger", true)
+//
+//            } ?: devices.find {
+//
+//                it.name.contains("DataLogger", true)
+//
+//            }
+//        }
+//    }
+//
+//    LaunchedEffect(devices) {
+//
+//        val d =
+//            devices.find {
+//
+//                it.name.contains("DataLogger", true)
+//            }
+//
+//        if (d != null) {
+//
+//            Log.d(TAG, "DataLogger found: ${d.address}")
+//
+//            connectedDevice = d
+//        }
+//    }
+//
+//    DisposableEffect(Unit) {
+//
+//        onDispose {
+//
+//            Log.d(TAG, "Stopping scan")
+//
+//            viewModel.stopScan()
+//viewModel.stopAdvertising()
+//
+//        }
+//    }
+//
+//    /* stop advertising when data arrives */
+//
+//    LaunchedEffect(packetHistory.size) {
+//
+//        if (packetHistory.size > lastPacketCount) {
+//
+//            Log.d(TAG, "Packets received → stop advertising")
+//            viewModel.stopAdvertising()
+//
+//
+//            isGettingData = false
+//            isResetting = false
+//        }
+//    }
+//
+//    /* timeout safety */
+//
+//    LaunchedEffect(isGettingData, isResetting) {
+//
+//        if (isGettingData || isResetting) {
+//
+//            delay(40000)
+//
+//            Log.d(TAG, "Timeout → stop advertising")
+//            viewModel.stopAdvertising()
+//
+//
+//            isGettingData = false
+//            isResetting = false
+//        }
+//    }
+//
+//    /* ---------------- UI ---------------- */
+//
+//    Scaffold(
+//
+//        topBar = {
+//
+//            TopAppBar(
+//
+//                title = {
+//                    Text(AppStrings.ADVERTISING_DATA_TITLE)
+//                },
+//
+//                navigationIcon = {
+//
+//                    IconButton({
+//
+//                        navController.popBackStack()
+//
+//                    }) {
+//
+//                        Icon(
+//                            Icons.AutoMirrored.Filled.ArrowBack,
+//                            null
+//                        )
+//                    }
+//                },
+//
+//                actions = {
+//
+//                    IconButton({
+//
+//                        coroutineScope.launch {
+//
+//                            isRefreshing = true
+//
+//                            viewModel.stopScan()
+//
+//                            delay(500)
+//
+//                            viewModel.startScan()
+//
+//                            delay(1500)
+//
+//                            isRefreshing = false
+//                        }
+//
+//                    }) {
+//
+//                        if (isRefreshing)
+//
+//                            CircularProgressIndicator(
+//                                modifier = Modifier.size(20.dp)
+//                            )
+//
+//                        else
+//
+//                            Icon(Icons.Default.Refresh, null)
+//                    }
+//                }
+//            )
+//        }
+//
+//    ) { padding ->
+//
+//        Column(
+//
+//            Modifier
+//                .fillMaxSize()
+//                .padding(padding)
+//                .padding(16.dp)
+//
+//        ) {
+//
+//            /* device info */
+//
+//            Card(Modifier.fillMaxWidth()) {
+//
+//                Column(Modifier.padding(16.dp)) {
+//
+//                    Text(
+//                        currentDevice?.name
+//                            ?: "Searching DataLogger..."
+//                    )
+//
+//                    Text(
+//                        currentDevice?.address
+//                            ?: deviceAddress
+//                    )
+//
+//                    Text(
+//                        if (currentDevice != null)
+//                            "Receiving packets"
+//                        else if (isScanning)
+//                            "Scanning..."
+//                        else
+//                            "Idle"
+//                    )
+//
+//                    Text(
+//                        "Packets received: ${packetHistory.size}"
+//                    )
+//                }
+//            }
+//
+//            Spacer(Modifier.height(16.dp))
+//
+//            /* buttons */
+//
+//            Row {
+//
+//                Button(
+//
+//                    modifier = Modifier.weight(1f),
+//
+//                    onClick = {
+//
+//                        Log.d(TAG, "DOWNLOAD CLICKED")
+//
+//                        if (!isGettingData) {
+//
+//                            isGettingData = true
+//
+//                            lastPacketCount =
+//                                packetHistory.size
+//                            viewModel.requestDataLoggerDownload()
+//
+//
+//                        }
+//                    }
+//
+//                ) {
+//
+//                    if (isGettingData)
+//
+//                        CircularProgressIndicator(
+//                            modifier =
+//                                Modifier.size(18.dp)
+//                        )
+//
+//                    else
+//
+//                        Text("Download")
+//                }
+//
+//                Spacer(Modifier.width(12.dp))
+//
+//                OutlinedButton(
+//                    modifier = Modifier.weight(1f),
+//                    onClick = {
+//
+//                        Log.d(TAG, "RESET CLICKED")
+//
+//                        if (!isResetting) {
+//
+//                            isResetting = true
+//
+//                            viewModel.requestReset()
+//                        }
+//                    }
+//                ) {
+//
+//                    if (isResetting)
+//
+//                        CircularProgressIndicator(
+//                            modifier =
+//                                Modifier.size(18.dp)
+//                        )
+//
+//                    else
+//
+//                        Text("Reset")
+//                }
+//            }
+//
+//            Spacer(Modifier.height(16.dp))
+//
+//            /* packet list */
+//
+//            val listState =
+//                rememberLazyListState()
+//
+//            Box(Modifier.fillMaxSize()) {
+//
+//                if (packetHistory.isEmpty()) {
+//
+//                    Box(
+//                        Modifier.fillMaxSize(),
+//                        contentAlignment =
+//                            Alignment.Center
+//                    ) {
+//
+//                        CircularProgressIndicator()
+//                    }
+//                }
+//
+//                else {
+//
+//                    LazyColumn(
+//                        state = listState
+//                    ) {
+//
+//                        itemsIndexed(
+//                            packetHistory
+//                                .sortedByDescending {
+//                                    it.currentPacketId
+//                                }
+//                        ) { index, packet ->
+//
+//                            DataLoggerPacketCard(
+//                                packet,
+//                                index == 0
+//                            )
+//                        }
+//                    }
+//                }
+//
+//                DraggableScrollbar(
+//                    listState,
+//                    Modifier.align(
+//                        Alignment.CenterEnd
+//                    )
+//                )
+//            }
+//        }
+//    }
+//}
+
+
+
 package com.blesense.app.features.bluetooth.presentation.screens.dataLogger
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.os.Build
 import android.util.Log
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
-
 import androidx.compose.material3.*
-
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-
 import androidx.navigation.NavController
-
 import com.blesense.app.core.permission.BluetoothPermissionManager
-
 import com.blesense.app.coreui.constants.AppStrings
-import com.blesense.app.features.bluetooth.data.datasourse.BleCommandSender
 import com.blesense.app.features.bluetooth.domain.model.BleDevice
 import com.blesense.app.features.bluetooth.presentation.widget.dataLogger.DataLoggerPacketCard
 import com.blesense.app.features.bluetooth.presentation.widget.dataLogger.DraggableScrollbar
-
 import presentation.viewmodel.BluetoothScanViewModel
-
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-
-@OptIn(ExperimentalMaterial3Api::class)
+import android.net.Uri
+ import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 @SuppressLint("MissingPermission")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataLoggerScreen(
     deviceAddress: String,
@@ -53,30 +516,24 @@ fun DataLoggerScreen(
     viewModel: BluetoothScanViewModel
 ) {
 
-    val TAG = "BLE_ADV"
+    val TAG = "BLE_UI"
 
     val context = LocalContext.current
     val activity = context as? Activity ?: return
 
     val coroutineScope = rememberCoroutineScope()
 
-    /* ---------------- Permission manager ---------------- */
+    /* ---------------- PERMISSIONS ---------------- */
 
     lateinit var permissionManager: BluetoothPermissionManager
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
-        ) { result ->
-
-            val granted = result.values.all { it }
-
-            Log.d(TAG, "Permission result = $granted")
-
-            permissionManager.onPermissionResult(granted) {
-
-                viewModel.startScan()
-            }
+        ) { granted ->
+            permissionManager.onPermissionResult(
+                granted.values.all { it }
+            ) { viewModel.startScan() }
         }
 
     val bluetoothLauncher =
@@ -99,7 +556,6 @@ fun DataLoggerScreen(
 
     permissionManager =
         remember {
-
             BluetoothPermissionManager(
                 activity,
                 permissionLauncher,
@@ -108,56 +564,101 @@ fun DataLoggerScreen(
             )
         }
 
-    val permissionState by permissionManager.state.collectAsState()
-
-    /* ---------------- Start scan ---------------- */
-
     LaunchedEffect(Unit) {
-
         permissionManager.ensureReady {
-
-            Log.d(TAG, "Permissions ready → startScan")
-
             viewModel.startScan()
         }
     }
 
+    /* ---------------- STATE ---------------- */
 
-    /* ---------------- State ---------------- */
+    val devices by viewModel.devices.collectAsState()
+    val packetHistory by viewModel.dataLoggerPacketHistory.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
 
     var connectedDevice by remember {
         mutableStateOf<BleDevice?>(null)
     }
-
-    var isRefreshing by remember {
+    var isExporting by remember {
         mutableStateOf(false)
     }
 
-    var isGettingData by remember {
-        mutableStateOf(false)
-    }
+    val createDocumentLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("text/csv")
+        ) { uri: Uri? ->
 
-    var isResetting by remember {
-        mutableStateOf(false)
-    }
+            if (uri == null || packetHistory.isEmpty())
+                return@rememberLauncherForActivityResult
+
+            coroutineScope.launch {
+
+                isExporting = true
+
+                withContext(Dispatchers.IO) {
+
+                    try {
+
+                        context.contentResolver
+                            .openOutputStream(uri)
+                            ?.use { stream ->
+
+                                val df =
+                                    SimpleDateFormat(
+                                        "yyyy-MM-dd HH:mm:ss.SSS",
+                                        Locale.getDefault()
+                                    )
+
+                                val header =
+                                    "Timestamp,Packet_ID,Last_Packet_ID,Device_ID,Raw_Data_Bytes,Raw_Hex_String\n"
+
+                                stream.write(
+                                    header.toByteArray()
+                                )
+
+                                packetHistory
+                                    .sortedByDescending {
+                                        it.currentPacketId
+                                    }
+                                    .forEach { packet ->
+
+                                        val bytes =
+                                            packet.rawData
+                                                .split(" ")
+                                                .size
+
+                                        val line =
+                                            "${df.format(Date(packet.timestamp))}," +
+                                                    "${packet.currentPacketId}," +
+                                                    "${packet.lastPacketId}," +
+                                                    "${packet.deviceId}," +
+                                                    "$bytes," +
+                                                    "\"${packet.rawData}\"\n"
+
+                                        stream.write(
+                                            line.toByteArray()
+                                        )
+                                    }
+                            }
+
+                    } catch (e: Exception) {
+
+                        Log.e("CSV", "Export failed", e)
+                    }
+                }
+
+                isExporting = false
+            }
+        }
+    var isRefreshing by remember { mutableStateOf(false) }
+    var isGettingData by remember { mutableStateOf(false) }
+    var isResetting by remember { mutableStateOf(false) }
 
     var lastPacketCount by remember {
         mutableIntStateOf(0)
     }
 
-    val packetHistory by viewModel
-        .dataLoggerPacketHistory
-        .collectAsState()
-
-    val devices by viewModel
-        .devices
-        .collectAsState()
-
-    val isScanning by viewModel
-        .isScanning
-        .collectAsState()
-
-    /* ---------------- Device detection ---------------- */
+    /* ---------------- FIND DEVICE ---------------- */
 
     val currentDevice by remember(devices, deviceAddress) {
 
@@ -171,48 +672,36 @@ fun DataLoggerScreen(
             } ?: devices.find {
 
                 it.name.contains("DataLogger", true)
-
             }
         }
     }
 
     LaunchedEffect(devices) {
 
-        val d =
-            devices.find {
+        currentDevice?.let {
 
-                it.name.contains("DataLogger", true)
-            }
-
-        if (d != null) {
-
-            Log.d(TAG, "DataLogger found: ${d.address}")
-
-            connectedDevice = d
+            connectedDevice = it
         }
     }
+
+    /* stop scan when leaving */
 
     DisposableEffect(Unit) {
 
         onDispose {
 
-            Log.d(TAG, "Stopping scan")
-
             viewModel.stopScan()
-viewModel.stopAdvertising()
-
+            viewModel.stopAdvertising()
         }
     }
 
-    /* stop advertising when data arrives */
+    /* stop advertising when packets arrive */
 
     LaunchedEffect(packetHistory.size) {
 
         if (packetHistory.size > lastPacketCount) {
 
-            Log.d(TAG, "Packets received → stop advertising")
             viewModel.stopAdvertising()
-
 
             isGettingData = false
             isResetting = false
@@ -227,237 +716,436 @@ viewModel.stopAdvertising()
 
             delay(40000)
 
-            Log.d(TAG, "Timeout → stop advertising")
             viewModel.stopAdvertising()
-
 
             isGettingData = false
             isResetting = false
         }
     }
 
+    /* ---------------- LOST PACKET CALCULATION ---------------- */
+
+    val lostPacketIds =
+        remember(packetHistory) {
+
+            val ids =
+                packetHistory.map {
+                    it.currentPacketId
+                }
+
+            if (ids.size < 2)
+                emptyList()
+
+            else {
+
+                val min = ids.minOrNull()!!
+                val max = ids.maxOrNull()!!
+
+                val set = ids.toSet()
+
+                (min..max)
+                    .filter { it !in set }
+            }
+        }
+
+    /* ---------------- THEME BACKGROUND ---------------- */
+
+    val backgroundGradient =
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary,
+                MaterialTheme.colorScheme.background
+            )
+        )
+
+    val textColor =
+        MaterialTheme.colorScheme.onPrimary
+
     /* ---------------- UI ---------------- */
 
-    Scaffold(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundGradient)
+    ) {
 
-        topBar = {
+        Scaffold(
 
-            TopAppBar(
+            containerColor = Color.Transparent,
 
-                title = {
-                    Text(AppStrings.ADVERTISING_DATA_TITLE)
-                },
+            topBar = {
 
-                navigationIcon = {
+                TopAppBar(
 
-                    IconButton({
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
+                        ),
 
-                        navController.popBackStack()
+                    title = {
 
-                    }) {
-
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            null
+                        Text(
+                            AppStrings.ADVERTISING_DATA_TITLE,
+                            color = textColor
                         )
+                    },
+
+                    navigationIcon = {
+
+                        IconButton({
+
+                            navController.popBackStack()
+
+                        }) {
+
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                null,
+                                tint = textColor
+                            )
+                        }
+                    },
+
+                    actions = {
+
+                        IconButton({
+
+                            coroutineScope.launch {
+
+                                isRefreshing = true
+
+                                viewModel.stopScan()
+
+                                delay(1000)
+
+                                viewModel.startScan()
+
+                                delay(3000)
+
+                                isRefreshing = false
+                            }
+
+                        }) {
+
+                            if (isRefreshing)
+
+                                CircularProgressIndicator(
+                                    modifier =
+                                        Modifier.size(20.dp),
+                                    color = textColor
+                                )
+
+                            else
+
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    null,
+                                    tint = textColor
+                                )
+                        }
                     }
-                },
+                )
+            }
 
-                actions = {
+        ) { padding ->
 
-                    IconButton({
+            Column(
 
-                        coroutineScope.launch {
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
 
-                            isRefreshing = true
+            ) {
 
-                            viewModel.stopScan()
+                /* DEVICE INFO */
 
-                            delay(500)
+                Card(
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                MaterialTheme.colorScheme.surface
+                        )
+                ) {
 
-                            viewModel.startScan()
+                    Column(
+                        Modifier.padding(16.dp)
+                    ) {
 
-                            delay(1500)
+                        Text(
+                            "Device: ${
+                                currentDevice?.name
+                                    ?: "Data Logger"
+                            }"
+                        )
 
-                            isRefreshing = false
+                        Text(
+                            currentDevice?.address
+                                ?: deviceAddress
+                        )
+
+                        Spacer(
+                            Modifier.height(6.dp)
+                        )
+
+                        Row(
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(12.dp)
+                                        .background(
+                                            if (connectedDevice != null)
+                                                Color.Green
+                                            else
+                                                Color.Red,
+                                            CircleShape
+                                        )
+                            )
+
+                            Spacer(
+                                Modifier.width(8.dp)
+                            )
+
+                            Text(
+
+                                if (connectedDevice != null)
+                                    "Connected"
+                                else if (isScanning)
+                                    "Scanning..."
+                                else
+                                    "Idle"
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                /* ACTION BUTTONS */
+
+                Row {
+
+                    Button(
+
+                        modifier =
+                            Modifier.weight(1f),
+
+                        onClick = {
+
+                            if (!isGettingData) {
+
+                                isGettingData = true
+
+                                lastPacketCount =
+                                    packetHistory.size
+
+                                viewModel
+                                    .requestDataLoggerDownload()
+                            }
                         }
 
-                    }) {
+                    ) {
 
-                        if (isRefreshing)
+                        if (isGettingData)
 
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp)
+                                modifier =
+                                    Modifier.size(18.dp)
                             )
 
                         else
 
-                            Icon(Icons.Default.Refresh, null)
+                            Text("Get Data")
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Button(
+
+                        modifier =
+                            Modifier.weight(1f),
+
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor =
+                                    MaterialTheme
+                                        .colorScheme
+                                        .error
+                            ),
+
+                        onClick = {
+
+                            if (!isResetting) {
+
+                                isResetting = true
+
+                                viewModel.requestReset()
+                            }
+                        }
+
+                    ) {
+
+                        if (isResetting)
+
+                            CircularProgressIndicator(
+                                modifier =
+                                    Modifier.size(18.dp)
+                            )
+
+                        else
+
+                            Text("Reset Device")
                     }
                 }
-            )
-        }
 
-    ) { padding ->
+                Spacer(Modifier.height(16.dp))
 
-        Column(
+                /* STATISTICS */
 
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
+                Card {
 
-        ) {
+                    Column(
+                        Modifier.padding(16.dp)
+                    ) {
 
-            /* device info */
+                        Text("Total Packets Arrival")
 
-            Card(Modifier.fillMaxWidth()) {
-
-                Column(Modifier.padding(16.dp)) {
-
-                    Text(
-                        currentDevice?.name
-                            ?: "Searching DataLogger..."
-                    )
-
-                    Text(
-                        currentDevice?.address
-                            ?: deviceAddress
-                    )
-
-                    Text(
-                        if (currentDevice != null)
-                            "Receiving packets"
-                        else if (isScanning)
-                            "Scanning..."
-                        else
-                            "Idle"
-                    )
-
-                    Text(
-                        "Packets received: ${packetHistory.size}"
-                    )
+                        Text(
+                            packetHistory.size.toString(),
+                            style =
+                                MaterialTheme.typography.headlineMedium
+                        )
+                    }
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
 
-            /* buttons */
+                Card {
 
-            Row {
+                    Column(
+                        Modifier.padding(16.dp)
+                    ) {
+
+                        Text("Packets Lost")
+
+                        Text(
+                            lostPacketIds.size.toString(),
+                            style =
+                                MaterialTheme.typography.headlineMedium,
+                            color =
+                                if (lostPacketIds.isEmpty())
+                                    MaterialTheme.colorScheme.onSurface
+                                else
+                                    MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
 
                 Button(
 
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    enabled =
+                        packetHistory.isNotEmpty() &&
+                                !isExporting,
 
                     onClick = {
 
-                        Log.d(TAG, "DOWNLOAD CLICKED")
+                        val timestamp =
+                            SimpleDateFormat(
+                                "yyyyMMdd_HHmmss",
+                                Locale.getDefault()
+                            ).format(Date())
 
-                        if (!isGettingData) {
+                        val fileName =
+                            "DataLogger_Raw_${deviceId}_$timestamp.csv"
 
-                            isGettingData = true
-
-                            lastPacketCount =
-                                packetHistory.size
-                            viewModel.requestDataLoggerDownload()
-
-
-                        }
+                        createDocumentLauncher.launch(fileName)
                     }
 
                 ) {
 
-                    if (isGettingData)
+                    if (isExporting) {
 
-                        CircularProgressIndicator(
-                            modifier =
-                                Modifier.size(18.dp)
-                        )
+                        Row(
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
 
-                    else
-
-                        Text("Download")
-                }
-
-                Spacer(Modifier.width(12.dp))
-
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-
-                        Log.d(TAG, "RESET CLICKED")
-
-                        if (!isResetting) {
-
-                            isResetting = true
-
-                            viewModel.requestReset()
-                        }
-                    }
-                ) {
-
-                    if (isResetting)
-
-                        CircularProgressIndicator(
-                            modifier =
-                                Modifier.size(18.dp)
-                        )
-
-                    else
-
-                        Text("Reset")
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            /* packet list */
-
-            val listState =
-                rememberLazyListState()
-
-            Box(Modifier.fillMaxSize()) {
-
-                if (packetHistory.isEmpty()) {
-
-                    Box(
-                        Modifier.fillMaxSize(),
-                        contentAlignment =
-                            Alignment.Center
-                    ) {
-
-                        CircularProgressIndicator()
-                    }
-                }
-
-                else {
-
-                    LazyColumn(
-                        state = listState
-                    ) {
-
-                        itemsIndexed(
-                            packetHistory
-                                .sortedByDescending {
-                                    it.currentPacketId
-                                }
-                        ) { index, packet ->
-
-                            DataLoggerPacketCard(
-                                packet,
-                                index == 0
+                            CircularProgressIndicator(
+                                modifier =
+                                    Modifier.size(18.dp)
                             )
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Text("Exporting CSV...")
                         }
                     }
-                }
 
-                DraggableScrollbar(
-                    listState,
-                    Modifier.align(
-                        Alignment.CenterEnd
+                    else {
+
+                        Text("Export All Raw Data as CSV")
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+
+                /* PACKET LIST */
+
+                val listState =
+                    rememberLazyListState()
+
+                Box(
+                    Modifier.fillMaxSize()
+                ) {
+
+                    if (packetHistory.isEmpty()) {
+
+                        Box(
+                            Modifier.fillMaxSize(),
+                            contentAlignment =
+                                Alignment.Center
+                        ) {
+
+                            CircularProgressIndicator()
+                        }
+                    }
+
+                    else {
+
+                        LazyColumn(
+                            state = listState
+                        ) {
+
+                            itemsIndexed(
+                                packetHistory
+                                    .sortedByDescending {
+                                        it.currentPacketId
+                                    }
+                            ) { index, packet ->
+
+                                DataLoggerPacketCard(
+                                    packet,
+                                    index == 0
+                                )
+                            }
+                        }
+                    }
+
+                    DraggableScrollbar(
+                        listState,
+                        Modifier.align(
+                            Alignment.CenterEnd
+                        )
                     )
-                )
+                }
             }
         }
     }

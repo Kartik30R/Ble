@@ -28,7 +28,6 @@ class TempLoggerParser : SensorParser {
             rawHumidity = data[3] * 100 + data[4],
             rawData = data.joinToString(" ") { "%02X".format(it) },
             deviceAddress = result.device.address,
-            timestamp = System.currentTimeMillis()
-        )
+         )
     }
 }

@@ -82,7 +82,7 @@ import java.util.UUID
 class BleCommandSender(
     private val context: Context
 ) {
-
+    private val companyId = 0x0059
     companion object {
         private const val TAG = "BLE_ADV"
         private val SERVICE_UUID =
@@ -163,12 +163,14 @@ class BleCommandSender(
                 .setTimeout(0)
                 .build()
 
-        val data =
-            AdvertiseData.Builder()
-                .setIncludeDeviceName(false)
-                .addServiceUuid(SERVICE_UUID)
-                .addServiceData(SERVICE_UUID, command)
-                .build()
+
+
+        val data = AdvertiseData.Builder()
+            .addManufacturerData(companyId, command)
+            .setIncludeDeviceName(false)
+            .setIncludeTxPowerLevel(false)
+            .build()
+
 
         currentCallback =
             object : AdvertiseCallback() {
@@ -226,4 +228,6 @@ class BleCommandSender(
             currentCallback = null
         }
     }
+
+
 }

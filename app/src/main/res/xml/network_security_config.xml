@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+
+    <!-- Allow HTTP for backend -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">172.26.77.246</domain>
+    </domain-config>
+
+    <!-- Allow local testing IP -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.16.1</domain>
+    </domain-config>
+
+    <!-- Google API -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">generativelanguage.googleapis.com</domain>
     </domain-config>
+
 </network-security-config>

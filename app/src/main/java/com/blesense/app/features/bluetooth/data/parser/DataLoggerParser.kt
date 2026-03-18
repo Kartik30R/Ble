@@ -3,48 +3,70 @@ package com.blesense.app.features.bluetooth.data.parser
 import android.bluetooth.le.ScanResult
 import com.blesense.app.features.bluetooth.domain.model.SensorData
 
-class DataLoggerParser : SensorParser {
+     class DataLoggerParser : SensorParser {
 
-    private var dumpBaseTime: Long? = null
-    override fun parse(result: ScanResult): SensorData? {
+        private var dumpBaseTime: Long? = null
 
-        val raw = result.scanRecord
-            ?.manufacturerSpecificData
-            ?.valueAt(0)
-            ?: return null
+        override fun parse(result: ScanResult): SensorData? {
 
-        val requiredSize = 234
+            val data =
+                result.scanRecord
+                    ?.manufacturerSpecificData
+                    ?.valueAt(0)
+                    ?: return null
 
-        val data = when {
-            raw.size < requiredSize ->
-                raw + ByteArray(requiredSize - raw.size)
-            raw.size > requiredSize ->
-                raw.copyOf(requiredSize)
-            else -> raw
-        }
+            if (data.size < 244) return null
 
-        val deviceId = data[231].toInt() and 0xFF
+            val size = data.size
 
-        val accel = mutableListOf<Triple<Int,Int,Int>>()
+            val currentReceivedId =
+                (data[size - 5].toInt() and 0xFF) or
+                        ((data[size - 4].toInt() and 0xFF) shl 8)
 
-        var i = 0
-        while (i + 2 < 231) {
-            accel.add(
-                Triple(
-                    data[i++].toInt() and 0xFF,
-                    data[i++].toInt() and 0xFF,
-                    data[i++].toInt() and 0xFF
+            val totalPacketsCount =
+                (data[size - 3].toInt() and 0xFF) or
+                        ((data[size - 2].toInt() and 0xFF) shl 8)
+
+            val now = System.currentTimeMillis()
+
+            if (dumpBaseTime == null)
+                dumpBaseTime = now
+
+            val packetAge =
+                (totalPacketsCount - currentReceivedId) * 60_000L
+
+            val timestamp =
+                dumpBaseTime!! - packetAge
+
+            val accel = mutableListOf<Triple<Int,Int,Int>>()
+
+            var index = 0
+
+            while (index + 2 < 240) {
+
+                accel.add(
+                    Triple(
+                        data[index++].toInt() and 0xFF,
+                        data[index++].toInt() and 0xFF,
+                        data[index++].toInt() and 0xFF
+                    )
                 )
+            }
+
+            if (currentReceivedId == 1)
+                dumpBaseTime = null
+
+            return SensorData.DataLoggerData(
+                deviceId = "1",
+                currentPacketId = totalPacketsCount,
+                lastPacketId = currentReceivedId,
+                payloadAccel = accel,
+                timestamp = timestamp,
+                rawData =
+                    data.joinToString(" ") {
+                        "%02X".format(it)
+                    }
             )
         }
-
-        return SensorData.DataLoggerData(
-            deviceId = deviceId.toString(),
-            currentPacketId = deviceId,
-            lastPacketId = deviceId,
-            payloadAccel = accel,
-            timestamp = System.currentTimeMillis(),
-            rawData = data.joinToString(" ") { "%02X".format(it) }
-        )
     }
-}
+

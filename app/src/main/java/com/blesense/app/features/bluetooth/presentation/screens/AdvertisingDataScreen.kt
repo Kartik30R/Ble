@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
  import com.blesense.app.Presentation.widgets.HeaderSection
 import com.blesense.app.R
+import com.blesense.app.app.Routes
 
 import com.blesense.app.coreui.constants.AppStrings
 import com.blesense.app.coreui.theme.ThemeManager
@@ -45,8 +46,7 @@ fun AdvertisingDataScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
-
-    // --- Lifecycle Management ---
+     // --- Lifecycle Management ---
     LaunchedEffect(activity) {
         activity?.let { viewModel.startScan() }
     }
@@ -62,14 +62,6 @@ fun AdvertisingDataScreen(
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     LaunchedEffect(Unit) {
         mediaPlayer = MediaPlayer.create(context, R.raw.nuclear_alarm)?.apply { isLooping = true }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-            mediaPlayer = null
-        }
     }
 
     // --- State Observation ---

@@ -22,4 +22,7 @@ object Routes {
 
     const val CHART_2 =
         "chart_screen_2/{title}/{value}"
+
+
+    const val ip="172.26.77.246:8080"
 }

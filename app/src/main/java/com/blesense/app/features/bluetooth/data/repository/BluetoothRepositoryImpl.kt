@@ -6,7 +6,9 @@ import android.util.Log
 import com.blesense.app.features.bluetooth.data.datasource.AndroidBleScanner
 import com.blesense.app.features.bluetooth.data.datasourse.BleCommandSender
 import com.blesense.app.features.bluetooth.data.datasourse.InMemoryHistoryStore
+ import com.blesense.app.features.bluetooth.data.entity.BlePacketUpload
 import com.blesense.app.features.bluetooth.data.parser.SensorParserRouter
+import com.blesense.app.features.bluetooth.data.remote.BleRemoteDataSource
 import com.blesense.app.features.bluetooth.domain.model.BleDevice
 import com.blesense.app.features.bluetooth.domain.model.HistoricalDataEntry
 import com.blesense.app.features.bluetooth.domain.model.SensorData
@@ -19,9 +21,9 @@ class BluetoothRepositoryImpl(
     private val scanner: AndroidBleScanner,
     private val parser: SensorParserRouter,
     private val history: InMemoryHistoryStore,
-    private val commandSender: BleCommandSender
-
-) : BluetoothRepository {
+    private val commandSender: BleCommandSender,
+    private val remote: BleRemoteDataSource
+) : BluetoothRepository   {
 
     // Main Device List and Status
     private val _devices = MutableStateFlow<List<BleDevice>>(emptyList())
@@ -37,9 +39,7 @@ class BluetoothRepositoryImpl(
     init {
         scanner.results
             .onEach { result ->
-                scanner.results.collect {
-                    Log.d("TEST", "scan received")
-                }
+                Log.d("TEST", "scan received")
                 val deviceAddress = result.device.address
                 val advName = result.scanRecord?.deviceName
                 val deviceName = result.device.name
@@ -48,6 +48,7 @@ class BluetoothRepositoryImpl(
 
                 // 🔴 Ignore devices with no name (like old code)
                 if (finalName.isNullOrBlank()) {
+                     Log.v("BLE_REPO", "Ignored device: No Name found at $deviceAddress")
                     return@onEach
                 }
 
@@ -63,10 +64,18 @@ class BluetoothRepositoryImpl(
                             finalName.contains("NH", ignoreCase = true)
 
                 if (!isKnownSensor) {
+                    Log.v("BLE_REPO", "Filtered out non-target device: $finalName ($deviceAddress)")
                     return@onEach
+                } else {
+                    Log.i("BLE_REPO", "🎯 Target Sensor Found: $finalName RSSI: ${result.rssi}")
                 }
 
                 val parsed = parser.parse(result)
+
+                val rawAdvertisement =
+                    result.scanRecord?.bytes
+                        ?.joinToString("") { "%02X".format(it) }
+                        ?: ""
                 Log.d("TEST", "parsed packetId=${parsed.toString()}")
                 val device = BleDevice(
                     name = finalName,
@@ -79,7 +88,7 @@ class BluetoothRepositoryImpl(
                 updateDeviceList(device)
 
                 if (parsed != null) {
-
+                    Log.d("BLE_REPO", "✅ Parsed Data: ${parsed::class.simpleName} from $finalName")
                     history.add(
                         deviceAddress,
                         HistoricalDataEntry(
@@ -101,6 +110,25 @@ class BluetoothRepositoryImpl(
                         }
 
                         else -> Unit
+                    }
+
+                    repoScope.launch {
+
+                        val uploadMap = parsed.toUploadMap()
+
+                        val upload = BlePacketUpload(
+                            deviceId = parsed.deviceId ?: "unknown",
+                            deviceAddress = result.device.address,
+                            rssi = result.rssi,
+                            rawAdvertisement = rawAdvertisement,
+                            // Extract the exact type string we need for the backend
+                            parsedType = uploadMap["type"] as? String ?: "Unknown",
+                            parsedData = uploadMap,
+                            // See Step 3 below regarding this timestamp
+                            timestamp = System.currentTimeMillis()                        )
+
+
+                        remote.uploadPacket(upload)
                     }
                 }
             }

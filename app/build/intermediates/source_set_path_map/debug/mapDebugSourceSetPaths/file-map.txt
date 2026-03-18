@@ -72,11 +72,11 @@ com.blesense.app-constraintlayout-2.0.1-70 C:\Users\hp\AppData\Local\Android\Sdk
 com.blesense.app-drawerlayout-1.1.1-71 C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\f4e24f7ff4c1e8cb5e3468e035a7e29e\transformed\drawerlayout-1.1.1\res
 com.blesense.app-material3-72 C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\f69fdd6e25ac5d5dd08bcd144703d910\transformed\material3\res
 com.blesense.app-transition-1.6.0-73 C:\Users\hp\AppData\Local\Android\Sdk\caches\8.13\transforms\fed0cb3c2fe0e079b9324fa5190f3619\transformed\transition-1.6.0\res
-com.blesense.app-pngs-74 D:\Ble\app\build\generated\res\pngs\debug
-com.blesense.app-res-75 D:\Ble\app\build\generated\res\processDebugGoogleServices
-com.blesense.app-resValues-76 D:\Ble\app\build\generated\res\resValues\debug
-com.blesense.app-packageDebugResources-77 D:\Ble\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.blesense.app-packageDebugResources-78 D:\Ble\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.blesense.app-debug-79 D:\Ble\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.blesense.app-debug-80 D:\Ble\app\src\debug\res
-com.blesense.app-main-81 D:\Ble\app\src\main\res
+com.blesense.app-pngs-74 D:\BLE SENSE\Ble\app\build\generated\res\pngs\debug
+com.blesense.app-res-75 D:\BLE SENSE\Ble\app\build\generated\res\processDebugGoogleServices
+com.blesense.app-resValues-76 D:\BLE SENSE\Ble\app\build\generated\res\resValues\debug
+com.blesense.app-packageDebugResources-77 D:\BLE SENSE\Ble\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.blesense.app-packageDebugResources-78 D:\BLE SENSE\Ble\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.blesense.app-debug-79 D:\BLE SENSE\Ble\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.blesense.app-debug-80 D:\BLE SENSE\Ble\app\src\debug\res
+com.blesense.app-main-81 D:\BLE SENSE\Ble\app\src\main\res

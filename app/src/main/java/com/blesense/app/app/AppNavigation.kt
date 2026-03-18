@@ -162,14 +162,15 @@ fun AppNavigation(navController: NavHostController) {
         // -------- Settings --------
         composable(Routes.SETTINGS) {
             ModernSettingsScreen(
-                viewModel = authViewModel,
+
                 onSignOut = {
                     authViewModel.logout()
                     navController.navigate(Routes.FIRST) {
                         popUpTo(Routes.INTERMEDIATE) { inclusive = true }
                     }
                 },
-                navController = navController
+                navController = navController,
+                authViewModel =  authViewModel,
             )
         }
 

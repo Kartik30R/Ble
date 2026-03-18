@@ -36,6 +36,10 @@ fun SettingsItemRow(
     navController: NavHostController,
 ) {
     var switchState by remember { mutableStateOf(initialSwitchState) }
+
+    LaunchedEffect(initialSwitchState) {
+        switchState = initialSwitchState
+    }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
     var showAccountsDialog by remember { mutableStateOf(false) }

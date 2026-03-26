@@ -22,7 +22,8 @@ class BluetoothRepositoryImpl(
     private val parser: SensorParserRouter,
     private val history: InMemoryHistoryStore,
     private val commandSender: BleCommandSender,
-    private val remote: BleRemoteDataSource
+    private val remote: BleRemoteDataSource,
+    private val mobileId: String
 ) : BluetoothRepository   {
 
     // Main Device List and Status
@@ -114,18 +115,20 @@ class BluetoothRepositoryImpl(
 
                     repoScope.launch {
 
-                        val uploadMap = parsed.toUploadMap()
+                        val uploadMap = parsed.toUploadMap().toMutableMap()
+
+                        val type = uploadMap.remove("type") as? String ?: "Unknown"
 
                         val upload = BlePacketUpload(
+                            mobileId = mobileId,
                             deviceId = parsed.deviceId ?: "unknown",
                             deviceAddress = result.device.address,
                             rssi = result.rssi,
                             rawAdvertisement = rawAdvertisement,
-                            // Extract the exact type string we need for the backend
-                            parsedType = uploadMap["type"] as? String ?: "Unknown",
+                            parsedType = type,
                             parsedData = uploadMap,
-                            // See Step 3 below regarding this timestamp
-                            timestamp = System.currentTimeMillis()                        )
+                            timestamp = System.currentTimeMillis() / 1000
+                        )
 
 
                         remote.uploadPacket(upload)

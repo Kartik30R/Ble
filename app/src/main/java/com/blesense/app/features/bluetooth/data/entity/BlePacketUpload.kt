@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName
 
 data class BlePacketUpload(
 
+    @SerializedName("mobileId")
+    val mobileId: String,
+
     @SerializedName("deviceId")
     val deviceId: String,
 

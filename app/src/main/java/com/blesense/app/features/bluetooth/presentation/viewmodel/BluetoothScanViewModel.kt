@@ -1,5 +1,6 @@
 package presentation.viewmodel
 
+ import android.content.Context
  import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
  import com.blesense.app.core.network.BleWebSocketManager
@@ -56,23 +57,10 @@ class BluetoothScanViewModel(
 
     /* ---------- WEBSOCKET ---------- */
 
-    fun connectWebSocket() {
-        wsManager.connect()
+    fun connectWebSocket(context: Context) {
+        wsManager.connect(context)
     }
-
     fun disconnectWebSocket() {
-        wsManager.disconnect()
-    }
-
-    /* ---------- LIVE STREAM CONTROL ---------- */
-
-    fun enableLiveStreaming() {
-        LiveStreamController.enableWebSocket()
-        wsManager.connect()
-    }
-
-    fun disableLiveStreaming() {
-        LiveStreamController.disableWebSocket()
         wsManager.disconnect()
     }
 

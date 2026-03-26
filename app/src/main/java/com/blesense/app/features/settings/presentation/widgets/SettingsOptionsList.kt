@@ -26,9 +26,9 @@ fun SettingsOptionsList(
     dividerColor: Color,
     iconTint: Color,
     isDarkMode: Boolean,
-    isLiveStreaming: Boolean,
+
     onDarkModeToggle: (Boolean) -> Unit,
-    onLiveStreamingToggle: (Boolean) -> Unit,
+
     navController: NavHostController
 ) {
 
@@ -66,17 +66,7 @@ fun SettingsOptionsList(
                         )
                     }
 
-                    "Live Streaming" -> {
-                        SettingsItemRow(
-                            item = item,
-                            textColor = textColor,
-                            secondaryTextColor = secondaryTextColor,
-                            iconTint = iconTint,
-                            initialSwitchState = isLiveStreaming,
-                            onSwitchChange = onLiveStreamingToggle,
-                            navController = navController
-                        )
-                    }
+
 
                     else -> {
                         SettingsItemRow(

@@ -18,8 +18,9 @@ object BluetoothModule {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-    }
 
+         BleWebSocketManager.connect(appContext)
+    }
     /* ---------- Core dependencies ---------- */
 
     private val scanner by lazy {
@@ -54,12 +55,17 @@ object BluetoothModule {
     /* ---------- Repository ---------- */
 
     private val repository by lazy {
+        val clientId = android.provider.Settings.Secure.getString(
+            appContext.contentResolver,
+            android.provider.Settings.Secure.ANDROID_ID
+        ) ?: "unknown_mobile"
         BluetoothRepositoryImpl(
             scanner = scanner,
             parser = parserRouter,
             history = historyStore,
             commandSender = commandSender,
-            remote = remoteDataSource
+            remote = remoteDataSource,
+            mobileId = clientId
         )
     }
 

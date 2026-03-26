@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,7 +38,7 @@ fun ModernSettingsScreen(
     val bluetoothViewModel: BluetoothScanViewModel = viewModel(
         factory = BluetoothModule.bluetoothScanViewModelFactory()
     )
-
+    val context = LocalContext.current
     /* ---------- Auth State ---------- */
 
     val authState by authViewModel.authState.collectAsState()
@@ -142,27 +143,12 @@ fun ModernSettingsScreen(
                 iconTint = MaterialTheme.colorScheme.primary,
 
                 isDarkMode = isDark,
-                isLiveStreaming = wsEnabled,
 
                 onDarkModeToggle = {
                     ThemeManager.toggleDarkMode(it)
                 },
 
-                onLiveStreamingToggle = { enabled ->
 
-                    if (enabled) {
-
-                        LiveStreamController.enableWebSocket()
-
-                        bluetoothViewModel.connectWebSocket()
-
-                    } else {
-
-                        LiveStreamController.disableWebSocket()
-
-                        bluetoothViewModel.disconnectWebSocket()
-                    }
-                },
 
                 navController = navController
             )

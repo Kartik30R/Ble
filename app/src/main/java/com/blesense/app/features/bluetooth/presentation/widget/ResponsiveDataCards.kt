@@ -116,6 +116,21 @@ fun DataCard(
             numericValue <= 70f -> Color(0xFF4CAF50) // Ideal
             else -> Color(0xFFE91E63)                // Humid
         }
+        AppStrings.PM1, AppStrings.PM2_5, AppStrings.PM4 -> when {
+            numericValue <= 12f -> Color(0xFF4CAF50) // Good
+            numericValue <= 35f -> Color(0xFFFFC107) // Moderate
+            else -> Color(0xFFF44336)                // High
+        }
+        AppStrings.PM10 -> when {
+            numericValue <= 54f -> Color(0xFF4CAF50) // Good
+            numericValue <= 154f -> Color(0xFFFFC107) // Moderate
+            else -> Color(0xFFF44336)                // High
+        }
+        AppStrings.CO2 -> when {
+            numericValue <= 800f -> Color(0xFF4CAF50) // Good
+            numericValue <= 1200f -> Color(0xFFFFC107) // Fair
+            else -> Color(0xFFF44336)                // Poor
+        }
         else -> MaterialTheme.colorScheme.primaryContainer
     }
 

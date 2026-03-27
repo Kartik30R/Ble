@@ -14,6 +14,7 @@ class AddSensorPacketUseCase(private val repository: BluetoothRepository) {
             is SensorData.SDTData -> TODO()
             is SensorData.SHT40Data -> TODO()
             is SensorData.SoilSensorData -> TODO()
+            is SensorData.Sen6xData -> TODO()
         }
     }
 }

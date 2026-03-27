@@ -188,6 +188,18 @@ fun AdvertisingDataScreen(
                         .format(Date(sensorData.timestamp)),
                     AppStrings.RAW_DATA to sensorData.rawData
                 )
+                is SensorData.Sen6xData -> listOf(
+                    AppStrings.NODE_ID_LABEL to sensorData.deviceId,
+                    AppStrings.PM1 to "${sensorData.pm1} µg/m³",
+                    AppStrings.PM2_5 to "${sensorData.pm25} µg/m³",
+                    AppStrings.PM4 to "${sensorData.pm4} µg/m³",
+                    AppStrings.PM10 to "${sensorData.pm10} µg/m³",
+                    AppStrings.TEMPERATURE to "${sensorData.temperature}°C",
+                    AppStrings.HUMIDITY to "${sensorData.humidity}%",
+                    AppStrings.CO2 to "${sensorData.co2} ppm",
+                    AppStrings.VOC to (sensorData.voc.takeIf { it != "0" } ?: "0"),
+                    AppStrings.NOX to (sensorData.nox.takeIf { it != "0" } ?: "0")
+                )
 
                 else -> emptyList()
             }

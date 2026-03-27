@@ -3,6 +3,7 @@ package com.blesense.app.features.bluetooth.data.repository
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.util.Log
+import com.blesense.app.core.network.BleWebSocketManager
 import com.blesense.app.features.bluetooth.data.datasource.AndroidBleScanner
 import com.blesense.app.features.bluetooth.data.datasourse.BleCommandSender
 import com.blesense.app.features.bluetooth.data.datasourse.InMemoryHistoryStore
@@ -62,7 +63,8 @@ class BluetoothRepositoryImpl(
                             finalName.contains("Lux", ignoreCase = true) ||
                             finalName.contains("SOIL", ignoreCase = true) ||
                             finalName.contains("Speed", ignoreCase = true) ||
-                            finalName.contains("NH", ignoreCase = true)
+                            finalName.contains("NH", ignoreCase = true)||
+                            finalName.contains("SEN", ignoreCase = true)
 
                 if (!isKnownSensor) {
                     Log.v("BLE_REPO", "Filtered out non-target device: $finalName ($deviceAddress)")
@@ -132,6 +134,7 @@ class BluetoothRepositoryImpl(
 
 
                         remote.uploadPacket(upload)
+                        BleWebSocketManager.sendPacket(upload)
                     }
                 }
             }

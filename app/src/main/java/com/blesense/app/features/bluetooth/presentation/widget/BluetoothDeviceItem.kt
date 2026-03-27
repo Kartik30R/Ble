@@ -112,6 +112,7 @@ private fun getPreviewText(selected: String, data: SensorData): String {
         is SensorData.SoilSensorData -> "N:${data.nitrogen} P:${data.phosphorus} K:${data.potassium}"
         is SensorData.SDTData -> "Speed: ${data.speed}m/s, Dist: ${data.distance}m"
         is SensorData.AmmoniaSensorData -> "NH3: ${data.ammonia}"
+        is SensorData.Sen6xData -> "PM2.5: ${data.pm25}, CO2: ${data.co2} ppm"
         is SensorData.DataLoggerData -> {
             val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(data.timestamp))
             "ID: ${data.currentPacketId} | Points: ${data.payloadAccel.size} | $time"

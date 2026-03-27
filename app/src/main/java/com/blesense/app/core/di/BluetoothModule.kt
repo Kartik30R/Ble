@@ -48,7 +48,8 @@ object BluetoothModule {
             soil = SoilParser(),
             sdt = SDTParser(),
             tempLogger = TempLoggerParser(),
-            dataLogger = DataLoggerParser()
+            dataLogger = DataLoggerParser(),
+            sen6x = Sen6xParser()
         )
     }
 

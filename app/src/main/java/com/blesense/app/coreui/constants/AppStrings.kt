@@ -40,6 +40,13 @@ object AppStrings {
     const val OBJECT_DETECTED = "Object Detected"
     const val STEPS = "Steps"
     const val AMMONIA = "Ammonia"
+    const val PM1 = "PM1.0"
+    const val PM2_5 = "PM2.5"
+    const val PM4 = "PM4.0"
+    const val PM10 = "PM10"
+    const val CO2 = "CO2"
+    const val VOC = "VOC"
+    const val NOX = "NOx"
 
     const val RESET_STEPS = "RESET STEPS"
 

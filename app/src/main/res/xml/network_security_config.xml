@@ -3,7 +3,7 @@
 
     <!-- Allow HTTP for backend -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">172.26.76.74</domain>
+        <domain includeSubdomains="true">172.26.78.34</domain>
     </domain-config>
 
     <!-- Allow local testing IP -->

@@ -105,7 +105,32 @@ sealed class SensorData {
             "deviceAddress" to deviceAddress
         )
     }
+    data class Sen6xData(
+        override val deviceId: String,
+        val pm1: String,
+        val pm25: String,
+        val pm4: String,
+        val pm10: String,
+        val temperature: String,
+        val humidity: String,
+        val co2: String,
+        val voc: String,
+        val nox: String
+    ) : SensorData() {
 
+        override fun toUploadMap() = mapOf(
+            "type" to "SEN6x",
+            "pm1" to pm1,
+            "pm25" to pm25,
+            "pm4" to pm4,
+            "pm10" to pm10,
+            "temperature" to temperature,
+            "humidity" to humidity,
+            "co2" to co2,
+            "voc" to voc,
+            "nox" to nox
+        )
+    }
     data class DataLoggerData(
         override val deviceId: String,
         val currentPacketId: Int,

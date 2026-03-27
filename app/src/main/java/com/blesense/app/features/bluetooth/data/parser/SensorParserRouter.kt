@@ -13,7 +13,8 @@ class SensorParserRouter(
     private val soil: SoilParser,
     private val sdt: SDTParser,
     private val tempLogger: TempLoggerParser,
-    private val dataLogger: DataLoggerParser
+    private val dataLogger: DataLoggerParser,
+    private val sen6x: Sen6xParser
 ) {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -24,13 +25,25 @@ class SensorParserRouter(
                 ?: result.device?.name
                 ?: return null
 
+        android.util.Log.d("BLE_NAME", "📡 Device detected: $deviceName")
+        android.util.Log.d("BLE_NAME", "📡 Device address: ${result.device.address}")
+
         val manufacturerData =
             result.scanRecord?.manufacturerSpecificData
                 ?: return null
 
         if (manufacturerData.size() == 0) return null
 
+        val raw = manufacturerData.valueAt(0)
+        val hex = raw.joinToString(" ") { String.format("%02X", it) }
+
+        android.util.Log.d("BLE_RAW", "📦 Raw Data ($deviceName): $hex")
+
+        if (manufacturerData.size() == 0) return null
+
         val deviceType = determineDeviceType(deviceName)
+
+        android.util.Log.d("BLE_TYPE", "🧠 Detected Type: $deviceType for $deviceName")
 
         return when (deviceType) {
             "SHT40" -> sht40.parse(result)
@@ -41,8 +54,10 @@ class SensorParserRouter(
             "Ammonia Sensor" -> ammonia.parse(result)
             "DataLogger" -> dataLogger.parse(result)
             "TempLogger" -> tempLogger.parse(result)
+            "SEN6x" -> sen6x.parse(result)
             else -> null
         }
+
     }
 
     private fun determineDeviceType(name: String?): String = when {
@@ -58,6 +73,7 @@ class SensorParserRouter(
         name?.contains("TempLogger", ignoreCase = true) == true -> "TempLogger"
         name?.contains("TLOG", ignoreCase = true) == true -> "TempLogger"
         name?.contains("Temp Logger", ignoreCase = true) == true -> "TempLogger"
+        name?.contains("SEN", ignoreCase = true) == true -> "SEN6x"
         else -> "Unknown Device"
     }
 

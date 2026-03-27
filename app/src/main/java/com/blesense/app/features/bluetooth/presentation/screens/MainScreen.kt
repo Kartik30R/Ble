@@ -51,7 +51,8 @@ fun MainScreen(
         "Speed Distance",
         "Ammonia Sensor",
         "DataLogger",
-        "TempLogger"
+        "TempLogger",
+        "SEN6x"
     )
     var selectedSensors by remember { mutableStateOf(setOf<String>()) }
 
@@ -387,6 +388,9 @@ private fun matchesSensorType(deviceName: String?, selectedType: String): Boolea
             deviceName.contains("TempLogger", true) ||
                     deviceName.contains("Temp Logger", true) ||
                     deviceName.contains("TLOG", true)
+
+        "SEN6x" ->
+            deviceName.contains("SEN", true)
 
         else -> false
     }

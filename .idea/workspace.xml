@@ -68,20 +68,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2a8d1c62-c65c-4014-bffc-df98cbe8e759" name="Changes" comment="add: packet persistency api">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/data/parser/Sen6xParser.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/local-state/build-history.bin" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/local-state/build-history.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/app/AppNavigation.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/app/AppNavigation.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/app/Routes.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/app/Routes.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/core/di/BluetoothModule.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/core/di/BluetoothModule.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/coreui/constants/AppStrings.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/coreui/constants/AppStrings.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/data/parser/SensorParserRouter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/data/parser/SensorParserRouter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/core/presentation/IntermediateScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/core/presentation/IntermediateScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/data/repository/BluetoothRepositoryImpl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/data/repository/BluetoothRepositoryImpl.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/domain/model/SensorData.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/domain/model/SensorData.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/domain/usecase/AddSensorPacketUseCase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/domain/usecase/AddSensorPacketUseCase.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/screens/AdvertisingDataScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/screens/AdvertisingDataScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/screens/MainScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/screens/MainScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/widget/BluetoothDeviceItem.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/widget/BluetoothDeviceItem.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/widget/ResponsiveDataCards.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/blesense/app/features/bluetooth/presentation/widget/ResponsiveDataCards.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/network_security_config.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/xml/network_security_config.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

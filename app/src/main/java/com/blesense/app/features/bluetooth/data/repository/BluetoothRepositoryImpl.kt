@@ -133,8 +133,8 @@ class BluetoothRepositoryImpl(
                         )
 
 
-                        remote.uploadPacket(upload)
-                        BleWebSocketManager.sendPacket(upload)
+                        launch { remote.uploadPacket(upload) }
+                        launch { BleWebSocketManager.sendPacket(upload) }
                     }
                 }
             }

@@ -10,6 +10,7 @@ object Routes {
     const val HOME = "home_screen"
     const val SETTINGS = "settings_screen"
     const val ROBOT = "robot_screen"
+    const val LED_REMOTE = "led_remote_screen"
 
     const val ADVERTISING =
         "advertising/{deviceName}/{deviceAddress}/{sensorType}/{deviceId}"

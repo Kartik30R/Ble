@@ -25,6 +25,7 @@ import com.blesense.app.features.auth.presentation.screen.RegisterScreen
 import com.blesense.app.features.bluetooth.presentation.screens.dataLogger.DataLoggerScreen
 import com.blesense.app.features.bluetooth.presentation.screens.graph.ChartScreen
 import com.blesense.app.features.remote.RobotControlScreen
+import com.blesense.app.features.remote.led.AdvertisingScreen as LedRemoteScreen
 import com.blesense.app.features.settings.presentation.screens.ModernSettingsScreen
 import presentation.viewmodel.BluetoothScanViewModel
 
@@ -157,6 +158,11 @@ fun AppNavigation(navController: NavHostController) {
             RobotControlScreen {
                 act?.finish()
             }
+        }
+
+        // -------- LED Remote --------
+        composable(Routes.LED_REMOTE) {
+            LedRemoteScreen(navController = navController)
         }
 
         // -------- Settings --------

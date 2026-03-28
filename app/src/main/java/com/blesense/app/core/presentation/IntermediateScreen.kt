@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.blesense.app.R
+import com.blesense.app.app.Routes
 import com.blesense.app.features.remote.RobotControlCompose
 
 private val CornerRadius = 28.dp
@@ -123,6 +124,17 @@ fun IntermediateScreen(navController: NavHostController) {
                     ) {
                         val intent = Intent(context, RobotControlCompose::class.java)
                         launcher.launch(intent)
+                    }
+                }
+
+
+                item {
+                    ProfessionalCard(
+                        icon = R.drawable.bluetooth,
+                        title = "LED Control",
+                        subtitle = "Smart LED remote"
+                    ) {
+                        navController.navigate(Routes.LED_REMOTE)
                     }
                 }
 

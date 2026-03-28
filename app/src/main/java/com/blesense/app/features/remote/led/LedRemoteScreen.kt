@@ -78,6 +78,7 @@ enum class LEDCommand(
     SOLID_CYAN         (7, "Cyan",        Color(0xFF00FFFF), "Solid Cyan Color",              "Solid",     0x0007),
     INDIAN_FLAG        (8, "Indian Flag", Color(0xFFFF9933), "Saffron-White-Green Flag",      "Solid",     0x0008),
     SOLID_ORANGE       (9, "Orange",      Color(0xFFFF6600), "Solid Orange Color",            "Solid",     0x0009),
+    SOLID_OFF          (0, "OFF",         Color.Black,       "Turn LEDs off",                 "Solid",     0x0000),
 
     ANIM_CYLON         (1, "Cylon Scanner",   Color(0xFFFF0000), "Red scanning back and forth",  "Animation", 0x0001),
     ANIM_POLICE        (2, "Police Strobe",   Color(0xFF0000FF), "Alternating red/blue flash",   "Animation", 0x0002),
@@ -114,13 +115,19 @@ fun AdvertisingScreen(navController: NavHostController) {
         var isAdvertising       by remember { mutableStateOf(false) }
         var hasPermissions      by remember { mutableStateOf(checkAdvertisingPermissions(context)) }
         var selectedRemote      by remember { mutableStateOf(RemoteType.REMOTE_1) }
-        var selectedCommand     by remember { mutableStateOf(LEDCommand.SOLID_RED) }
+        var selectedCommands    by remember { mutableStateOf(setOf(LEDCommand.SOLID_RED)) }
+        var cycleIntervalSeconds by remember { mutableStateOf(2) }
         var showPermissionDialog by remember { mutableStateOf(false) }
         var advertisingTime     by remember { mutableStateOf(0) }
         var sliderValue         by remember { mutableStateOf(128) }
-        var customColor         by remember { mutableStateOf(Color.Red) }
-        var lastChangedWasColor by remember { mutableStateOf(false) }
-        
+
+        // 🕺 DISCO STATE
+        var isDiscoEnabled      by remember { mutableStateOf(false) }
+        var isStrobeEnabled     by remember { mutableStateOf(false) }
+        var discoSpeedMs        by remember { mutableStateOf(300L) }
+        var isDiscoRandom       by remember { mutableStateOf(false) }
+        var discoCounter        by remember { mutableStateOf(0) }
+
         var showHistorySheet    by remember { mutableStateOf(false) }
         val sheetState          = rememberModalBottomSheetState()
         val advertisingHistory  = remember { mutableStateListOf<AdvertisingHistory>() }
@@ -131,29 +138,61 @@ fun AdvertisingScreen(navController: NavHostController) {
         }
         var currentCallback by remember { mutableStateOf<AdvertiseCallback?>(null) }
 
+        // 🔄 DISCO LOOP: High-speed counter for strobe effect
+        LaunchedEffect(isDiscoEnabled, discoSpeedMs) {
+            if (isDiscoEnabled && isAdvertising) {
+                while (true) {
+                    delay(discoSpeedMs)
+                    discoCounter++
+                }
+            }
+        }
+
+        // 🔄 CYCLING LOGIC: Derive the active command from the loop
+        val activeCommand = remember(selectedCommands, advertisingTime, cycleIntervalSeconds, selectedRemote, isDiscoEnabled, discoCounter, isDiscoRandom, isStrobeEnabled) {
+            val list = if (isDiscoEnabled) {
+                LEDCommand.values().filter { it.mode == "Solid" }
+            } else {
+                selectedCommands.toList()
+            }
+
+            if (list.isEmpty()) LEDCommand.SOLID_RED
+            else {
+                // Strobe Mode Alternation (Every second frame is Black)
+                if (isDiscoEnabled && isStrobeEnabled && (discoCounter % 2 == 1)) {
+                    LEDCommand.SOLID_OFF
+                } else {
+                    val index = if (isDiscoEnabled) {
+                        if (isDiscoRandom) (0 until list.size).random()
+                        else discoCounter % list.size
+                    } else {
+                        (advertisingTime / cycleIntervalSeconds) % list.size
+                    }
+                    list[index]
+                }
+            }
+        }
+
         // 🔗 LIVE SYNC LOGIC: Automatically update advertising when values change
-        LaunchedEffect(selectedCommand, sliderValue, customColor, selectedRemote) {
+        LaunchedEffect(activeCommand, sliderValue, selectedRemote) {
             if (isAdvertising) {
-                delay(200) // Debounce to prevent BLE stack spam
+                // Adjust debounce for Disco strobe
+                val debounce = if (isDiscoEnabled) (discoSpeedMs / 3).coerceAtMost(100L) else 200L
+                delay(debounce)
+
                 currentCallback?.let { stopAdvertising(bluetoothAdvertiser, it) }
-                
+
                 val cb = createAdvertiseCallback(
                     onSuccess = { /* Success state is already handled by outer state */ },
                     onFailure = { isAdvertising = false }
                 )
                 currentCallback = cb
-                
-                when (selectedRemote) {
-                    RemoteType.REMOTE_1 -> startAdvertising(bluetoothAdvertiser, cb, selectedRemote, selectedCommand)
-                    RemoteType.REMOTE_2 -> startAdvertising(bluetoothAdvertiser, cb, selectedRemote, selectedCommand)
-                    RemoteType.REMOTE_3 -> {
-                        if (lastChangedWasColor) {
-                            val closest = findClosestLEDCommand(customColor)
-                            startAdvertising(bluetoothAdvertiser, cb, RemoteType.REMOTE_1, closest)
-                        } else {
-                            sendSliderCommand(bluetoothAdvertiser, cb, sliderValue)
-                        }
-                    }
+
+                when {
+                    isDiscoEnabled -> startAdvertising(bluetoothAdvertiser, cb, RemoteType.REMOTE_1, activeCommand)
+                    selectedRemote == RemoteType.REMOTE_1 -> startAdvertising(bluetoothAdvertiser, cb, selectedRemote, activeCommand)
+                    selectedRemote == RemoteType.REMOTE_2 -> startAdvertising(bluetoothAdvertiser, cb, selectedRemote, activeCommand)
+                    selectedRemote == RemoteType.REMOTE_3 -> sendSliderCommand(bluetoothAdvertiser, cb, sliderValue)
                 }
             }
         }
@@ -173,7 +212,9 @@ fun AdvertisingScreen(navController: NavHostController) {
         }
 
         LaunchedEffect(selectedRemote) {
-            if (availableCommands.isNotEmpty()) selectedCommand = availableCommands.first()
+            if (availableCommands.isNotEmpty()) {
+                selectedCommands = setOf(availableCommands.first())
+            }
         }
 
         Scaffold(
@@ -234,8 +275,8 @@ fun AdvertisingScreen(navController: NavHostController) {
                                             scope.launch {
                                                 while (isAdvertising) { delay(1000); advertisingTime++ }
                                             }
-                                            val label = if (selectedRemote == RemoteType.REMOTE_3) "Slider: $sliderValue" else selectedCommand.displayName
-                                            val cId = if (selectedRemote == RemoteType.REMOTE_3) 0x0001 else selectedCommand.companyId
+                                            val label = if (selectedRemote == RemoteType.REMOTE_3) "Slider: $sliderValue" else activeCommand.displayName
+                                            val cId = if (selectedRemote == RemoteType.REMOTE_3) 0x0001 else activeCommand.companyId
                                             val hex = when(selectedRemote) {
                                                 RemoteType.REMOTE_1 -> "AA"
                                                 RemoteType.REMOTE_2 -> "BB"
@@ -246,15 +287,10 @@ fun AdvertisingScreen(navController: NavHostController) {
                                         onFailure = { isAdvertising = false; advertisingTime = 0 }
                                     )
                                     currentCallback = cb
-                                    if (selectedRemote == RemoteType.REMOTE_3) {
-                                        if (lastChangedWasColor) {
-                                            val closest = findClosestLEDCommand(customColor)
-                                            startAdvertising(bluetoothAdvertiser, cb, RemoteType.REMOTE_1, closest)
-                                        } else {
-                                            sendSliderCommand(bluetoothAdvertiser, cb, sliderValue)
-                                        }
-                                    } else {
-                                        startAdvertising(bluetoothAdvertiser, cb, selectedRemote, selectedCommand)
+                                    when {
+                                        isDiscoEnabled -> startAdvertising(bluetoothAdvertiser, cb, RemoteType.REMOTE_1, activeCommand)
+                                        selectedRemote == RemoteType.REMOTE_3 -> sendSliderCommand(bluetoothAdvertiser, cb, sliderValue)
+                                        else -> startAdvertising(bluetoothAdvertiser, cb, selectedRemote, activeCommand)
                                     }
                                 }
                             },
@@ -298,20 +334,23 @@ fun AdvertisingScreen(navController: NavHostController) {
                 CompactStatusCard(
                     isAdvertising = isAdvertising,
                     time = timeString,
-                    commandName = when(selectedRemote) {
-                        RemoteType.REMOTE_3 -> if (lastChangedWasColor) {
-                            "Match: ${findClosestLEDCommand(customColor).displayName}"
-                        } else "Intensity: $sliderValue"
-                        else -> selectedCommand.displayName
+                    commandName = when {
+                        isDiscoEnabled && isAdvertising -> if (activeCommand.displayName == "DARK") "STROBE: OFF" else "DISCO: ${activeCommand.displayName}"
+                        selectedRemote == RemoteType.REMOTE_3 -> "Intensity: $sliderValue"
+                        else -> if (selectedCommands.size > 1) "${activeCommand.displayName} (Cycle)" else activeCommand.displayName
                     },
-                    accentColor = if (selectedRemote == RemoteType.REMOTE_3 && lastChangedWasColor) customColor else selectedRemote.color,
-                    companyId = if (selectedRemote == RemoteType.REMOTE_3) {
-                        if (lastChangedWasColor) findClosestLEDCommand(customColor).companyId else 0x0001
-                    } else selectedCommand.companyId,
-                    dataHex = when(selectedRemote) {
-                        RemoteType.REMOTE_1 -> "AA"
-                        RemoteType.REMOTE_2 -> "BB"
-                        RemoteType.REMOTE_3 -> if (lastChangedWasColor) "AA (Mapped)" else "CC ${sliderValue.toString(16).padStart(2,'0').uppercase()}"
+                    accentColor = when {
+                        isDiscoEnabled && isAdvertising -> activeCommand.color
+                        selectedRemote == RemoteType.REMOTE_3 -> selectedRemote.color
+                        else -> activeCommand.color
+                    },
+                    companyId = if (selectedRemote == RemoteType.REMOTE_3 && !isDiscoEnabled) 0x0001 else activeCommand.companyId,
+                    dataHex = when {
+                        isDiscoEnabled && isAdvertising -> "AA (Disco)"
+                        selectedRemote == RemoteType.REMOTE_1 -> "AA"
+                        selectedRemote == RemoteType.REMOTE_2 -> "BB"
+                        selectedRemote == RemoteType.REMOTE_3 -> "CC ${sliderValue.toString(16).padStart(2,'0').uppercase()}"
+                        else -> "—"
                     }
                 )
 
@@ -346,6 +385,25 @@ fun AdvertisingScreen(navController: NavHostController) {
                     item {
                         when (selectedRemote) {
                             RemoteType.REMOTE_1 -> {
+                                DiscoControlCard(
+                                    isEnabled = isDiscoEnabled,
+                                    onToggle = { isDiscoEnabled = it },
+                                    speed = discoSpeedMs,
+                                    onSpeedChange = { discoSpeedMs = it },
+                                    isRandom = isDiscoRandom,
+                                    onRandomToggle = { isDiscoRandom = it },
+                                    isStrobe = isStrobeEnabled,
+                                    onStrobeToggle = { isStrobeEnabled = it }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                CycleIntervalControl(
+                                    interval = cycleIntervalSeconds,
+                                    onIntervalChange = { cycleIntervalSeconds = it },
+                                    accentColor = selectedRemote.color
+                                )
+                                Spacer(Modifier.height(16.dp))
+
                                 availableCommands.chunked(3).forEach { row ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -355,8 +413,14 @@ fun AdvertisingScreen(navController: NavHostController) {
                                             ColorSwatch(
                                                 modifier = Modifier.weight(1f),
                                                 command = cmd,
-                                                isSelected = selectedCommand == cmd,
-                                                onSelect = { selectedCommand = it }
+                                                isSelected = selectedCommands.contains(cmd),
+                                                onSelect = {
+                                                    selectedCommands = if (selectedCommands.contains(it)) {
+                                                        if (selectedCommands.size > 1) selectedCommands - it else selectedCommands
+                                                    } else {
+                                                        selectedCommands + it
+                                                    }
+                                                }
                                             )
                                         }
                                         repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -367,27 +431,22 @@ fun AdvertisingScreen(navController: NavHostController) {
                                 availableCommands.forEach { cmd ->
                                     AnimationListItem(
                                         command = cmd,
-                                        isSelected = selectedCommand == cmd,
-                                        onSelect = { selectedCommand = it }
+                                        isSelected = selectedCommands.contains(cmd),
+                                        onSelect = {
+                                            selectedCommands = if (selectedCommands.contains(it)) {
+                                                if (selectedCommands.size > 1) selectedCommands - it else selectedCommands
+                                            } else {
+                                                selectedCommands + it
+                                            }
+                                        }
                                     )
                                 }
                             }
                             RemoteType.REMOTE_3 -> {
                                 IntensitySlider(
                                     value = sliderValue,
-                                    onValueChange = { 
-                                        sliderValue = it
-                                        lastChangedWasColor = false
-                                    },
-                                    accentColor = selectedRemote.color
-                                )
-                                Spacer(Modifier.height(16.dp))
-                                ColorPickerHSV(
-                                    initialColor = customColor,
-                                    onColorChange = { 
-                                        customColor = it
-                                        lastChangedWasColor = true
-                                    }
+                                    onValueChange = { sliderValue = it },
+                                    accentColor = activeCommand.color
                                 )
                             }
                         }
@@ -620,92 +679,139 @@ fun AnimationListItem(
 }
 
 @Composable
-fun ColorPickerHSV(
-    initialColor: Color,
-    onColorChange: (Color) -> Unit
+fun DiscoControlCard(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    speed: Long,
+    onSpeedChange: (Long) -> Unit,
+    isRandom: Boolean,
+    onRandomToggle: (Boolean) -> Unit,
+    isStrobe: Boolean,
+    onStrobeToggle: (Boolean) -> Unit
 ) {
-    var hsv by remember {
-        val hsvArr = FloatArray(3)
-        android.graphics.Color.colorToHSV((initialColor.red * 255).toInt() shl 16 or ((initialColor.green * 255).toInt() shl 8) or (initialColor.blue * 255).toInt(), hsvArr)
-        mutableStateOf(Triple(hsvArr[0], hsvArr[1], hsvArr[2]))
-    }
+    val discoColor1 = Color(0xFFFF00FF)
+    val discoColor2 = Color(0xFF00FFFF)
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (isEnabled) Color(0xFF121212) else MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Color Picker", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
-                        .background(Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv.first, hsv.second, hsv.third))))
-                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                        .background(
+                            Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red))
+                        )
+                        .padding(2.dp)
+                ) {
+                    Box(Modifier.fillMaxSize().clip(CircleShape).background(if (isEnabled) Color.Black else Color.White), contentAlignment = Alignment.Center) {
+                        Icon(
+                            if (isEnabled) Icons.Default.FlashOn else Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = if (isEnabled) Color.White else Color.Black,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Disco Vibes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = if (isEnabled) Color.White else Color.Black)
+                    Text(if (isEnabled) "INSANE VIBES ACTIVE" else "Party light show", style = MaterialTheme.typography.labelSmall, color = if (isEnabled) discoColor2 else Color.Gray)
+                }
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = onToggle,
+                    colors = SwitchDefaults.colors(checkedThumbColor = discoColor2)
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            if (isEnabled) {
+                Spacer(Modifier.height(24.dp))
 
-            // Hue Slider
-            Text("Hue", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Strobe Flashes", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                    Spacer(Modifier.weight(1f))
+                    Switch(checked = isStrobe, onCheckedChange = onStrobeToggle, colors = SwitchDefaults.colors(checkedThumbColor = discoColor1))
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text("Vibe Speed", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                Slider(
+                    value = (1100L - speed).toFloat(),
+                    onValueChange = { onSpeedChange(1100L - it.toLong()) },
+                    valueRange = 100f..1050f, // 50ms to 1000ms
+                    colors = SliderDefaults.colors(thumbColor = discoColor1, activeTrackColor = discoColor1)
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Chill", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text("INSANE SPEED", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Shuffle Mode", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                    Spacer(Modifier.weight(1f))
+                    Checkbox(checked = isRandom, onCheckedChange = onRandomToggle, colors = CheckboxDefaults.colors(checkedColor = discoColor2))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CycleIntervalControl(
+    interval: Int,
+    onIntervalChange: (Int) -> Unit,
+    accentColor: Color
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Timer, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Cycle Speed", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    color = accentColor.copy(alpha = 0.1f),
+                    shape = CircleShape
+                ) {
+                    Text(
+                        "${interval}s",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor
+                    )
+                }
+            }
             Slider(
-                value = hsv.first,
-                onValueChange = { 
-                    hsv = Triple(it, hsv.second, hsv.third)
-                    onColorChange(Color(android.graphics.Color.HSVToColor(floatArrayOf(it, hsv.second, hsv.third))))
-                },
-                valueRange = 0f..360f,
+                value = interval.toFloat(),
+                onValueChange = { onIntervalChange(it.toInt()) },
+                valueRange = 1f..5f,
+                steps = 3,
                 colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = Color.Transparent,
-                    inactiveTrackColor = Color.Transparent
-                ),
-                modifier = Modifier.background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)
-                    ),
-                    shape = RoundedCornerShape(4.dp)
+                    thumbColor = accentColor,
+                    activeTrackColor = accentColor
                 )
             )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Saturation Slider
-            Text("Saturation", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Slider(
-                value = hsv.second,
-                onValueChange = { 
-                    hsv = Triple(hsv.first, it, hsv.third)
-                    onColorChange(Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv.first, it, hsv.third))))
-                },
-                valueRange = 0f..1f,
-                colors = SliderDefaults.colors(thumbColor = Color.White)
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Value (Brightness) Slider
-            Text("Brightness", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Slider(
-                value = hsv.third,
-                onValueChange = { 
-                    hsv = Triple(hsv.first, hsv.second, it)
-                    onColorChange(Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv.first, hsv.second, it))))
-                },
-                valueRange = 0f..1f,
-                colors = SliderDefaults.colors(thumbColor = Color.White)
-            )
-            
             Text(
-                text = "RGB: ${(Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv.first, hsv.second, hsv.third))).red * 255).toInt()}, " +
-                       "${(Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv.first, hsv.second, hsv.third))).green * 255).toInt()}, " +
-                       "${(Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv.first, hsv.second, hsv.third))).blue * 255).toInt()}",
+                "Change color every $interval seconds automatically.",
                 style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.padding(top = 8.dp)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -723,7 +829,7 @@ fun IntensitySlider(
     ) {
         Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Intensity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Intensity Control", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Surface(
                     color = accentColor.copy(alpha = 0.2f),
                     shape = CircleShape
@@ -731,30 +837,46 @@ fun IntensitySlider(
                     Text(
                         text = "$value / 255",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Black,
                         color = accentColor
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(18.dp))
+
+            // 🌈 Full Spectrum Rainbow Track
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)
+                        )
+                    )
+            )
 
             Slider(
                 value = value.toFloat(),
                 onValueChange = { onValueChange(it.toInt()) },
                 valueRange = 0f..255f,
                 colors = SliderDefaults.colors(
-                    thumbColor = accentColor,
-                    activeTrackColor = accentColor
-                )
+                    thumbColor = Color.White,
+                    activeTrackColor = Color.Transparent,
+                    inactiveTrackColor = Color.Transparent
+                ),
+                modifier = Modifier.offset(y = (-16).dp) // Overlay on gradient
             )
 
             Text(
                 "Manufacturer Data: 0xCC ${value.toString(16).padStart(2,'0').uppercase()}",
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
@@ -857,16 +979,6 @@ private fun sendSliderCommand(
         advertiser.startAdvertising(buildSettings(), buildAdvData(companyId, data), callback)
     } catch (e: SecurityException) { e.printStackTrace() }
     catch (e: Exception)          { e.printStackTrace() }
-}
-
-private fun findClosestLEDCommand(target: Color): LEDCommand {
-    val commands = LEDCommand.values().filter { it.mode == "Solid" }
-    return commands.minByOrNull { cmd ->
-        val dr = target.red - cmd.color.red
-        val dg = target.green - cmd.color.green
-        val db = target.blue - cmd.color.blue
-        dr * dr + dg * dg + db * db
-    } ?: LEDCommand.SOLID_WHITE
 }
 
 private fun stopAdvertising(advertiser: BluetoothLeAdvertiser?, callback: AdvertiseCallback) {

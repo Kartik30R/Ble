@@ -7,8 +7,9 @@ class SendBleCommandUseCase(
 ) {
     operator fun invoke(
         command: ByteArray,
-        durationMs: Long = 5000
+        durationMs: Long = 5000,
+        companyId: Int? = null
     ) {
-        repository.sendCommand(command, durationMs)
+        repository.sendCommand(command, durationMs, companyId)
     }
 }

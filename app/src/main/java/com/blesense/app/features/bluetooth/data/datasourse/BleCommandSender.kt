@@ -94,8 +94,13 @@ class BleCommandSender(
 
     private val advertiser: BluetoothLeAdvertiser? =
         bluetoothAdapter?.bluetoothLeAdvertiser
-
+    
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var currentCallback: AdvertiseCallback? = null
+    private var advertisingJob: Job? = null
+    
+    private var lastCommandBytes: ByteArray? = null
+    private var lastCompanyId: Int? = null
 
     init {
         Log.d(TAG, "BleCommandSender initialized")
@@ -131,7 +136,8 @@ class BleCommandSender(
 
     fun sendCommand(
         command: ByteArray,
-        durationMs: Long = 5000
+        durationMs: Long = 5000,
+        customCompanyId: Int? = null
     ) {
         Log.d(TAG, "Advertising STARTED successfully")
 
@@ -147,7 +153,17 @@ class BleCommandSender(
             return
         }
 
+        // Anti-flicker: If command is identical to current one, don't restart
+        if (customCompanyId == lastCompanyId && command.contentEquals(lastCommandBytes)) {
+            Log.d(TAG, "Identical command - skipping restart to prevent flicker")
+            restartJob(durationMs) // Just refresh the timer
+            return
+        }
+
         stopAdvertising()
+
+        lastCommandBytes = command
+        lastCompanyId = customCompanyId ?: companyId
 
         Log.d(TAG, "Command bytes = ${command.joinToString()}")
 
@@ -166,7 +182,7 @@ class BleCommandSender(
 
 
         val data = AdvertiseData.Builder()
-            .addManufacturerData(companyId, command)
+            .addManufacturerData(customCompanyId ?: companyId, command)
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
             .build()
@@ -195,18 +211,19 @@ class BleCommandSender(
         )
 
         Log.d(TAG, "startAdvertising called")
-
+        
         /* Auto stop after duration */
+        restartJob(durationMs)
+    }
 
-        Thread {
-
-            try {
-                Thread.sleep(durationMs)
-            } catch (_: Exception) {}
-
-            stopAdvertising()
-
-        }.start()
+    private fun restartJob(durationMs: Long) {
+        advertisingJob?.cancel()
+        advertisingJob = scope.launch(Dispatchers.Default) {
+            delay(durationMs)
+            withContext(Dispatchers.Main) {
+                stopAdvertising()
+            }
+        }
     }
 
     /* ------------------------------------------------ */
@@ -214,17 +231,18 @@ class BleCommandSender(
     /* ------------------------------------------------ */
 
     fun stopAdvertising() {
-
         if (!hasAdvertisePermission()) return
-
         if (advertiser == null) return
-
+        
+        advertisingJob?.cancel()
+        advertisingJob = null
+        
+        lastCommandBytes = null
+        lastCompanyId = null
+        
         currentCallback?.let {
-
             advertiser.stopAdvertising(it)
-
             Log.d(TAG, "Advertising STOPPED")
-
             currentCallback = null
         }
     }

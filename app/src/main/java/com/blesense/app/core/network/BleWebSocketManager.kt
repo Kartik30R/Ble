@@ -5,6 +5,8 @@ import android.util.Log
 import android.provider.Settings
 import com.blesense.app.app.Routes
 import com.blesense.app.features.bluetooth.data.entity.BlePacketUpload
+import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.tasks.Tasks
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +38,20 @@ object BleWebSocketManager {
     }
 
     private fun getIngestUrl(context: Context): String {
-        return "ws://${Routes.ip}/ws/ingest?clientId=${getMobileId(context)}"
+        var tokenParam = ""
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user != null) {
+            try {
+                val task = user.getIdToken(false)
+                val result = Tasks.await(task)
+                if (result.token != null) {
+                    tokenParam = "&token=${result.token}"
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get Firebase token", e)
+            }
+        }
+        return "ws://${Routes.ip}/ws/ingest?clientId=${getMobileId(context)}$tokenParam"
     }
 
     private fun getStreamUrl(): String {
@@ -51,14 +66,17 @@ object BleWebSocketManager {
             return
         }
 
-        val url = getIngestUrl(context)
-        Log.i(TAG, "🔗 Connecting to Ingest WS: $url")
+        // Launch on IO to avoid blocking main thread when fetching Firebase token
+        scope.launch(Dispatchers.IO) {
+            val url = getIngestUrl(context)
+            Log.i(TAG, "🔗 Connecting to Ingest WS: $url")
 
-        val request = Request.Builder()
-            .url(url)
-            .build()
+            val request = Request.Builder()
+                .url(url)
+                .build()
 
-        ingestSocket = client.newWebSocket(request, ingestListener)
+            ingestSocket = client.newWebSocket(request, ingestListener)
+        }
     }
 
     fun disconnect() {

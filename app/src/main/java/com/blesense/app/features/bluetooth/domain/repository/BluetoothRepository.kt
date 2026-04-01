@@ -55,7 +55,8 @@ interface BluetoothRepository {
 
     fun sendCommand(
         command: ByteArray,
-        durationMs: Long = 5000
+        durationMs: Long = 5000,
+        companyId: Int? = null
     )
 
     fun stopAdvertising()

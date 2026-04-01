@@ -11,6 +11,7 @@ import com.blesense.app.features.bluetooth.data.remote.BleRemoteDataSource
 import com.blesense.app.features.bluetooth.data.repository.BluetoothRepositoryImpl
 import com.blesense.app.features.bluetooth.domain.usecase.*
 import com.blesense.app.features.bluetooth.presentation.viewmodel.BluetoothScanViewModelFactory
+import com.blesense.app.features.remote.led.presentation.LedRemoteViewModelFactory
 
 object BluetoothModule {
 
@@ -120,6 +121,13 @@ object BluetoothModule {
                 StopBleAdvertisingUseCase(repository),
 
             wsManager = webSocketManager
+        )
+    }
+
+    fun ledRemoteViewModelFactory(): LedRemoteViewModelFactory {
+        return LedRemoteViewModelFactory(
+            sendBleCommand = SendBleCommandUseCase(repository),
+            stopBleAdvertising = StopBleAdvertisingUseCase(repository)
         )
     }
 }

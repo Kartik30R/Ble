@@ -210,9 +210,10 @@ class BluetoothRepositoryImpl(
 
     override fun sendCommand(
         command: ByteArray,
-        durationMs: Long
+        durationMs: Long,
+        companyId: Int?
     ) {
-        commandSender.sendCommand(command, durationMs)
+        commandSender.sendCommand(command, durationMs, companyId)
     }
 
     override fun stopAdvertising() {

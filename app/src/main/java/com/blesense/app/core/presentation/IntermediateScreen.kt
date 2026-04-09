@@ -25,6 +25,8 @@ import androidx.navigation.NavHostController
 import com.blesense.app.R
 import com.blesense.app.app.Routes
 import com.blesense.app.features.remote.RobotControlCompose
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.coreui.components.*
 
 private val CornerRadius = 28.dp
 private val HorizontalPadding = 24.dp
@@ -39,15 +41,20 @@ fun IntermediateScreen(navController: NavHostController) {
     )
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "BLE Sense",
+                        "Dashboard",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         }
     ) { padding ->
@@ -55,6 +62,7 @@ fun IntermediateScreen(navController: NavHostController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .neumorphicBackground()
                 .padding(padding)
                 .padding(horizontal = 20.dp)
         ) {
@@ -76,13 +84,14 @@ fun IntermediateScreen(navController: NavHostController) {
                     Text(
                         "Dashboard",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
                     )
 
                     Text(
                         "Manage BLE devices and tools",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = TextSecondary
                     )
                 }
             }
@@ -161,29 +170,33 @@ fun ProfessionalCard(
     subtitle: String,
     onClick: () -> Unit
 ) {
-
-    OutlinedCard(
+    GlassCard(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
-
         Column(
-            modifier = Modifier.padding(18.dp)
+            modifier = Modifier.padding(18.dp).fillMaxWidth()
         ) {
-
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = title,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            // Recessed Icon Container
+            GlassInsetBox(
+                modifier = Modifier.size(52.dp),
+                cornerShape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    painter = painterResource(icon),
+                    contentDescription = title,
+                    modifier = Modifier.size(26.dp),
+                    tint = MintGreenAccent
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -191,7 +204,7 @@ fun ProfessionalCard(
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = TextSecondary
             )
         }
     }

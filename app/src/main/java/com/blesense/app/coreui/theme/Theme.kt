@@ -1,58 +1,62 @@
 package com.blesense.app.coreui.theme
 
-import android.app.Activity
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import android.app.Activity
+import androidx.core.view.WindowInsetsControllerCompat
 
-private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary,
-    onPrimary = LightOnPrimary,
-    background = LightBackground,
-    onBackground = LightOnBackground,
-    surface = LightSurface,
-    onSurface = LightOnSurface,
-    outline = LightOutline,
-    error = LightError
+// Force dark mode exclusively utilizing the gradient edges as fallback colors
+private val GlassColorScheme = darkColorScheme(
+    primary = MintGreenAccent,
+    onPrimary = Color.Black,
+    primaryContainer = MintGreenGlow.copy(alpha = 0.3f),
+    onPrimaryContainer = MintGreenAccent,
+    
+    secondary = MintGreenAccent,
+    onSecondary = Color.Black,
+    secondaryContainer = MintGreenGlow.copy(alpha = 0.2f),
+    onSecondaryContainer = MintGreenAccent,
+    
+    tertiary = MintGreenGlow,
+    onTertiary = Color.Black,
+    
+    background = DarkGradientStart,
+    onBackground = TextPrimary,
+    
+    surface = DarkGradientEnd,
+    onSurface = TextPrimary,
+    surfaceVariant = GlassSurfaceColor,
+    onSurfaceVariant = TextSecondary,
+    
+    outline = GlassBorderColor,
+    outlineVariant = GlassBorderColor.copy(alpha = 0.5f),
+    
+    error = Color(0xFFCF6679),
+    onError = Color.Black
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-    outline = DarkOutline,
-    error = DarkError
-)
+
 
 @Composable
 fun BleSenseTheme(
     content: @Composable () -> Unit
 ) {
-    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
-//    val view = LocalView.current
-
-    val colorScheme =
-        if (isDarkMode) DarkColorScheme else LightColorScheme
-
-//    SideEffect {
-//        val window = (view.context as Activity).window
-//        window.statusBarColor = Color.Transparent.toArgb()
-//
-//        WindowCompat.getInsetsController(window, view)
-//            .isAppearanceLightStatusBars = !isDarkMode
-//    }
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            // Since we use a dark charcoal background (DarkGradientStart), 
+            // we need light icons (white) for the status bar to be visible.
+            WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = false
+        }
+    }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = GlassColorScheme,
         typography = AppTypography,
         shapes = AppShapes,
         content = content
     )
 }
-

@@ -155,7 +155,9 @@ fun AppNavigation(navController: NavHostController) {
         // -------- Robot --------
         composable(Routes.ROBOT) {
             val act = LocalContext.current as? Activity
-            RobotControlScreen {
+            RobotControlScreen(
+                navController = navController
+            ) {
                 act?.finish()
             }
         }

@@ -13,16 +13,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.blesense.app.coreui.components.GlassCard
+import com.blesense.app.coreui.components.GlassInsetBox
+import com.blesense.app.coreui.theme.*
 import com.blesense.app.coreui.constants.AppStrings
 
 @Composable
 fun ResponsiveDataCards(
-    data: List<Pair<String, String>>
+    displayData: List<Pair<String, String>>,
+    isAlarmActive: Boolean = false,
+    blinkAlpha: Float = 0f
 ) {
     // 1. Separate special data types using centralized AppStrings
-    val ammoniaData = data.find { it.first == AppStrings.AMMONIA }
-    val rawData = data.find { it.first == AppStrings.RAW_DATA }
-    val otherData = data.filterNot {
+    val ammoniaData = displayData.find { it.first == AppStrings.AMMONIA }
+    val rawData = displayData.find { it.first == AppStrings.RAW_DATA }
+    val otherData = displayData.filterNot {
         it.first == AppStrings.AMMONIA || it.first == AppStrings.RAW_DATA || it.first == AppStrings.NODE_ID_LABEL
     }
 
@@ -86,7 +91,12 @@ fun ResponsiveDataCards(
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
             ) {
                 rowItems.forEach { (label, value) ->
-                    DataCard(label = label, value = value)
+                    DataCard(
+                        label = label, 
+                        value = value,
+                        isAlarming = isAlarmActive,
+                        blinkAlpha = blinkAlpha
+                    )
                 }
                 // Maintain alignment if row is incomplete
                 if (rowItems.size == 1) {
@@ -100,81 +110,52 @@ fun ResponsiveDataCards(
 @Composable
 fun DataCard(
     label: String,
-    value: String
+    value: String,
+    isAlarming: Boolean = false,
+    blinkAlpha: Float = 0f
 ) {
-    val numericValue = value.replace("[^0-9.]".toRegex(), "").toFloatOrNull() ?: 0f
-
-    // 2. Dynamic Status Colors (Green/Yellow/Red logic)
-    val statusColor = when (label) {
-        AppStrings.TEMPERATURE -> when {
-            numericValue <= 15f -> Color(0xFF2196F3) // Cold
-            numericValue <= 30f -> Color(0xFF4CAF50) // Safe
-            else -> Color(0xFFF44336)                // High
-        }
-        AppStrings.HUMIDITY -> when {
-            numericValue <= 40f -> Color(0xFF03A9F4) // Dry
-            numericValue <= 70f -> Color(0xFF4CAF50) // Ideal
-            else -> Color(0xFFE91E63)                // Humid
-        }
-        AppStrings.PM1, AppStrings.PM2_5, AppStrings.PM4 -> when {
-            numericValue <= 12f -> Color(0xFF4CAF50) // Good
-            numericValue <= 35f -> Color(0xFFFFC107) // Moderate
-            else -> Color(0xFFF44336)                // High
-        }
-        AppStrings.PM10 -> when {
-            numericValue <= 54f -> Color(0xFF4CAF50) // Good
-            numericValue <= 154f -> Color(0xFFFFC107) // Moderate
-            else -> Color(0xFFF44336)                // High
-        }
-        AppStrings.CO2 -> when {
-            numericValue <= 800f -> Color(0xFF4CAF50) // Good
-            numericValue <= 1200f -> Color(0xFFFFC107) // Fair
-            else -> Color(0xFFF44336)                // Poor
-        }
-        else -> MaterialTheme.colorScheme.primaryContainer
-    }
-
-    ElevatedCard(
+    val alarmColor = Color(0xFFFF4848).copy(alpha = blinkAlpha)
+    
+    GlassCard(
         modifier = Modifier
-            .size(width = 145.dp, height = 115.dp),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = statusColor
-        )
+            .size(width = 160.dp, height = 130.dp)
+            .padding(4.dp)
+            .then(
+                if (isAlarming) Modifier.background(
+                    Brush.radialGradient(listOf(alarmColor, Color.Transparent))
+                ) else Modifier
+            )
     ) {
-        // Apply a subtle gradient overlay for the "Glassmorphism" look from your old UI
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.White.copy(alpha = 0.2f), Color.Transparent)
-                    )
-                )
-                .padding(12.dp),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.padding(12.dp).fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (statusColor == MaterialTheme.colorScheme.primaryContainer) 
-                        MaterialTheme.colorScheme.onPrimaryContainer 
-                    else Color.White,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = TextSecondary,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Recessed (Inset) Value Container
+            GlassInsetBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                cornerShape = RoundedCornerShape(10.dp)
+            ) {
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (statusColor == MaterialTheme.colorScheme.primaryContainer) 
-                        MaterialTheme.colorScheme.onPrimaryContainer 
-                    else Color.White,
+                    color = if (isAlarming) Color(0xFFFF5252) else MintGreenAccent,
                     fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center
                 )
             }
         }
     }
-}
+}

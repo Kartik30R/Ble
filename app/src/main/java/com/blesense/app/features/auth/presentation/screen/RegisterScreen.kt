@@ -33,8 +33,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blesense.app.* import com.blesense.app.core.common.google.GoogleSignInHelper
-import com.blesense.app.coreui.theme.ThemeManager
+import com.blesense.app.* 
+import com.blesense.app.core.common.google.GoogleSignInHelper
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.coreui.components.*
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import com.blesense.app.features.auth.presentation.viewmodel.AuthState
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -46,19 +48,19 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
-    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+
     val context = LocalContext.current
     val authState by viewModel.authState.collectAsState()
 
-    // Theme colors
-    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color.White
-    val textColor = if (isDarkMode) Color.White else Color.Black
-    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF8E8E93)
-    val textFieldBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color(0xFFFFFFFF)
-    val buttonBackgroundColor = if (isDarkMode) Color(0xFFBB86FC) else Color(0xFF007AFF)
-    val buttonTextColor = if (isDarkMode) Color.Black else Color.White
-    val dividerColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.LightGray
-    val borderColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.LightGray
+    // Glass theme colors
+    val backgroundColor = DarkGradientStart
+    val textColor = TextPrimary
+    val secondaryTextColor = TextSecondary
+    val textFieldBackgroundColor = GlassSurfaceColor
+    val buttonBackgroundColor = MintGreenAccent
+    val buttonTextColor = DarkGradientStart
+    val dividerColor = GlassBorderColor
+    val borderColor = GlassBorderColor
 
     // Form State
     var username by remember { mutableStateOf("") }
@@ -108,7 +110,7 @@ fun RegisterScreen(
                     CircularProgressIndicator(color = buttonBackgroundColor)
                 }
             },
-            containerColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+            containerColor = DarkGradientStart
         )
     }
 

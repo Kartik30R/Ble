@@ -2,21 +2,25 @@ package com.blesense.app.features.bluetooth.presentation.widget
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Paint
+ import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
-import com.blesense.app.coreui.constants.AppStrings
+ import androidx.core.content.FileProvider
+ import com.blesense.app.coreui.theme.GlassSurfaceColor
+import com.blesense.app.coreui.theme.MintGreenAccent
+import com.blesense.app.coreui.theme.TextPrimary
 import com.blesense.app.features.bluetooth.domain.model.HistoricalDataEntry
 import com.blesense.app.features.bluetooth.domain.model.SensorData
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +37,8 @@ fun DownloadButton(
     viewModel: BluetoothScanViewModel,
     deviceAddress: String,
     deviceName: String,
-    deviceId: String
+    deviceId: String,
+    isVertical: Boolean = true
 ) {
 
     val context = LocalContext.current
@@ -85,82 +90,116 @@ fun DownloadButton(
         }
 
 
-    Column {
-
-        // PREVIEW BUTTON
-        Button(
-
-            onClick = {
-
-                isExporting = true
-
-                exportAndPreviewPDF(
-                    context,
-                    viewModel,
-                    deviceAddress,
-                    deviceName,
-                    deviceId
-                ) {
-                    isExporting = false
-                }
-            },
-
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-
-        ) {
-
-            Text("Preview")
+    if (isVertical) {
+        Column {
+            PreviewActionButton(
+                context = context,
+                viewModel = viewModel,
+                deviceAddress = deviceAddress,
+                deviceName = deviceName,
+                deviceId = deviceId,
+                isExporting = isExporting,
+                onExportStateChange = { isExporting = it },
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            DownloadActionButton(
+                deviceName = deviceName,
+                isExporting = isExporting,
+                onDownloadClick = { createDocumentLauncher.launch(it) },
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            )
         }
+    } else {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PreviewActionButton(
+                context = context,
+                viewModel = viewModel,
+                deviceAddress = deviceAddress,
+                deviceName = deviceName,
+                deviceId = deviceId,
+                isExporting = isExporting,
+                onExportStateChange = { isExporting = it },
+                modifier = Modifier.weight(1f).height(56.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            DownloadActionButton(
+                deviceName = deviceName,
+                isExporting = isExporting,
+                onDownloadClick = { createDocumentLauncher.launch(it) },
+                modifier = Modifier.weight(1f).height(56.dp)
+            )
+        }
+    }
+}
 
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-
-        // DOWNLOAD BUTTON
-        Button(
-
-            onClick = {
-
-                val timestamp =
-                    SimpleDateFormat(
-                        "yyyyMMdd_HHmmss",
-                        Locale.getDefault()
-                    ).format(Date())
-
-                val safeName =
-                    deviceName.replace(
-                        "[^A-Za-z0-9_]".toRegex(),
-                        "_"
-                    )
-
-                val fileName =
-                    "${safeName}_$timestamp.pdf"
-
-                createDocumentLauncher.launch(fileName)
-            },
-
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-
-            enabled = !isExporting
-        ) {
-
-            if (isExporting) {
-
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp)
-                )
-
-            } else {
-
-                Text(
-                    "Download",
-                    fontWeight = FontWeight.Bold
-                )
+@Composable
+private fun PreviewActionButton(
+    context: Context,
+    viewModel: BluetoothScanViewModel,
+    deviceAddress: String,
+    deviceName: String,
+    deviceId: String,
+    isExporting: Boolean,
+    onExportStateChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = {
+            onExportStateChange(true)
+            exportAndPreviewPDF(
+                context,
+                viewModel,
+                deviceAddress,
+                deviceName,
+                deviceId
+            ) {
+                onExportStateChange(false)
             }
+        },
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = GlassSurfaceColor,
+            contentColor = TextPrimary
+        ),
+        shape = RoundedCornerShape(28.dp),
+        elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 4.dp)
+    ) {
+        Text("Preview", fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun DownloadActionButton(
+    deviceName: String,
+    isExporting: Boolean,
+    onDownloadClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = {
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val safeName = deviceName.replace("[^A-Za-z0-9_]".toRegex(), "_")
+            val fileName = "${safeName}_$timestamp.pdf"
+            onDownloadClick(fileName)
+        },
+        modifier = modifier,
+        enabled = !isExporting,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MintGreenAccent,
+            contentColor = Color.Black
+        ),
+        shape = RoundedCornerShape(28.dp),
+        elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 8.dp)
+    ) {
+        if (isExporting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = Color.Black,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text("Download", fontWeight = FontWeight.ExtraBold)
         }
     }
 }

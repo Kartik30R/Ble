@@ -500,7 +500,16 @@ import presentation.viewmodel.BluetoothScanViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import android.net.Uri
- import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.text.font.FontWeight
+import com.blesense.app.Presentation.widgets.HeaderSection
+import com.blesense.app.coreui.components.GlassCard
+import com.blesense.app.coreui.components.GlassInsetBox
+import com.blesense.app.coreui.components.NeonPillButton
+import com.blesense.app.coreui.theme.MintGreenAccent
+import com.blesense.app.coreui.theme.TextPrimary
+import com.blesense.app.coreui.theme.TextSecondary
+import com.blesense.app.coreui.theme.neumorphicBackground
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -750,401 +759,166 @@ fun DataLoggerScreen(
 
     /* ---------------- THEME BACKGROUND ---------------- */
 
-    val backgroundGradient =
-        Brush.verticalGradient(
-            listOf(
-                MaterialTheme.colorScheme.primary,
-                MaterialTheme.colorScheme.background
-            )
-        )
-
-    val textColor =
-        MaterialTheme.colorScheme.onPrimary
-
-    /* ---------------- UI ---------------- */
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundGradient)
-    ) {
-
+    Box(modifier = Modifier.fillMaxSize().neumorphicBackground()) {
         Scaffold(
-
             containerColor = Color.Transparent,
-
             topBar = {
-
-                TopAppBar(
-
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
-                        ),
-
-                    title = {
-
-                        Text(
-                            AppStrings.ADVERTISING_DATA_TITLE,
-                            color = textColor
-                        )
-                    },
-
-                    navigationIcon = {
-
-                        IconButton({
-
-                            navController.popBackStack()
-
-                        }) {
-
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                null,
-                                tint = textColor
-                            )
-                        }
-                    },
-
-                    actions = {
-
-                        IconButton({
-
-                            coroutineScope.launch {
-
-                                isRefreshing = true
-
-                                viewModel.stopScan()
-
-                                delay(1000)
-
-                                viewModel.startScan()
-
-                                delay(3000)
-
-                                isRefreshing = false
-                            }
-
-                        }) {
-
-                            if (isRefreshing)
-
-                                CircularProgressIndicator(
-                                    modifier =
-                                        Modifier.size(20.dp),
-                                    color = textColor
-                                )
-
-                            else
-
-                                Icon(
-                                    Icons.Default.Refresh,
-                                    null,
-                                    tint = textColor
-                                )
-                        }
-                    }
+                HeaderSection(
+                    navController = navController,
+                    viewModel = viewModel,
+                    deviceAddress = deviceAddress
                 )
             }
-
         ) { padding ->
-
             Column(
-
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp)
-
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 16.dp)
             ) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-                /* DEVICE INFO */
-
-                Card(
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor =
-                                MaterialTheme.colorScheme.surface
-                        )
-                ) {
-
-                    Column(
-                        Modifier.padding(16.dp)
-                    ) {
-
+                /* 1. Device Info (Neomorphic header) */
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            "Device: ${
-                                currentDevice?.name
-                                    ?: "Data Logger"
-                            }"
+                            text = currentDevice?.name ?: "Searching DataLogger...",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
                         )
-
                         Text(
-                            currentDevice?.address
-                                ?: deviceAddress
+                            text = currentDevice?.address ?: deviceAddress,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary
                         )
-
-                        Spacer(
-                            Modifier.height(6.dp)
-                        )
-
-                        Row(
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
-
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .size(12.dp)
-                                        .background(
-                                            if (connectedDevice != null)
-                                                Color.Green
-                                            else
-                                                Color.Red,
-                                            CircleShape
-                                        )
-                            )
-
-                            Spacer(
-                                Modifier.width(8.dp)
-                            )
-
-                            Text(
-
-                                if (connectedDevice != null)
-                                    "Connected"
-                                else if (isScanning)
-                                    "Scanning..."
-                                else
-                                    "Idle"
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                /* ACTION BUTTONS */
-
-                Row {
-
-                    Button(
-
-                        modifier =
-                            Modifier.weight(1f),
-
-                        onClick = {
-
-                            if (!isGettingData) {
-
-                                isGettingData = true
-
-                                lastPacketCount =
-                                    packetHistory.size
-
-                                viewModel
-                                    .requestDataLoggerDownload()
-                            }
-                        }
-
-                    ) {
-
-                        if (isGettingData)
-
-                            CircularProgressIndicator(
-                                modifier =
-                                    Modifier.size(18.dp)
-                            )
-
-                        else
-
-                            Text("Get Data")
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Button(
-
-                        modifier =
-                            Modifier.weight(1f),
-
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor =
-                                    MaterialTheme
-                                        .colorScheme
-                                        .error
-                            ),
-
-                        onClick = {
-
-                            if (!isResetting) {
-
-                                isResetting = true
-
-                                viewModel.requestReset()
-                            }
-                        }
-
-                    ) {
-
-                        if (isResetting)
-
-                            CircularProgressIndicator(
-                                modifier =
-                                    Modifier.size(18.dp)
-                            )
-
-                        else
-
-                            Text("Reset Device")
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                /* STATISTICS */
-
-                Card {
-
-                    Column(
-                        Modifier.padding(16.dp)
-                    ) {
-
-                        Text("Total Packets Arrival")
-
-                        Text(
-                            packetHistory.size.toString(),
-                            style =
-                                MaterialTheme.typography.headlineMedium
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Card {
-
-                    Column(
-                        Modifier.padding(16.dp)
-                    ) {
-
-                        Text("Packets Lost")
-
-                        Text(
-                            lostPacketIds.size.toString(),
-                            style =
-                                MaterialTheme.typography.headlineMedium,
-                            color =
-                                if (lostPacketIds.isEmpty())
-                                    MaterialTheme.colorScheme.onSurface
-                                else
-                                    MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-
-                Button(
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    enabled =
-                        packetHistory.isNotEmpty() &&
-                                !isExporting,
-
-                    onClick = {
-
-                        val timestamp =
-                            SimpleDateFormat(
-                                "yyyyMMdd_HHmmss",
-                                Locale.getDefault()
-                            ).format(Date())
-
-                        val fileName =
-                            "DataLogger_Raw_${deviceId}_$timestamp.csv"
-
-                        createDocumentLauncher.launch(fileName)
-                    }
-
-                ) {
-
-                    if (isExporting) {
-
-                        Row(
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
-
-                            CircularProgressIndicator(
-                                modifier =
-                                    Modifier.size(18.dp)
-                            )
-
-                            Spacer(Modifier.width(12.dp))
-
-                            Text("Exporting CSV...")
-                        }
-                    }
-
-                    else {
-
-                        Text("Export All Raw Data as CSV")
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-
-                /* PACKET LIST */
-
-                val listState =
-                    rememberLazyListState()
-
-                Box(
-                    Modifier.fillMaxSize()
-                ) {
-
-                    if (packetHistory.isEmpty()) {
-
-                        Box(
-                            Modifier.fillMaxSize(),
-                            contentAlignment =
-                                Alignment.Center
-                        ) {
-
-                            CircularProgressIndicator()
-                        }
-                    }
-
-                    else {
-
-                        LazyColumn(
-                            state = listState
-                        ) {
-
-                            itemsIndexed(
-                                packetHistory
-                                    .sortedByDescending {
-                                        it.currentPacketId
-                                    }
-                            ) { index, packet ->
-
-                                DataLoggerPacketCard(
-                                    packet,
-                                    index == 0
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                             GlassInsetBox(
+                                cornerShape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = if (currentDevice != null) "LINK ACTIVE" else if (isScanning) "SCANNING" else "OFFLINE",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (currentDevice != null) MintGreenAccent else TextSecondary,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Packets: ${packetHistory.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
                         }
                     }
+                }
 
-                    DraggableScrollbar(
-                        listState,
-                        Modifier.align(
-                            Alignment.CenterEnd
-                        )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                /* 2. Control Buttons Area */
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    NeonPillButton(
+                        text = if (isGettingData) "Syncing..." else "Download",
+                        onClick = {
+                            if (!isGettingData) {
+                                isGettingData = true
+                                lastPacketCount = packetHistory.size
+                                viewModel.requestDataLoggerDownload()
+                            }
+                        },
+                        isActive = !isGettingData,
+                        modifier = Modifier.weight(1f)
                     )
+
+                    NeonPillButton(
+                        text = if (isResetting) "Wiping..." else "Reset",
+                        onClick = {
+                            if (!isResetting) {
+                                isResetting = true
+                                viewModel.requestReset()
+                            }
+                        },
+                        isActive = !isResetting,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Export Button (Secondary Action)
+                NeonPillButton(
+                    text = if (isExporting) "Exporting CSV..." else "Export to CSV",
+                    onClick = {
+                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                        val safeName = deviceName.replace("[^A-Za-z0-9_]".toRegex(), "_")
+                        createDocumentLauncher.launch("${safeName}_$timestamp.csv")
+                    },
+                    isActive = packetHistory.isNotEmpty() && !isExporting,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                /* 3. Packet Stream List */
+                Text(
+                    text = "High-Storage Packet History",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val listState = rememberLazyListState()
+
+                GlassInsetBox(
+                    modifier = Modifier.fillMaxSize().padding(bottom = 16.dp),
+                    cornerShape = RoundedCornerShape(24.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                        if (packetHistory.isEmpty() && isScanning) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator(color = MintGreenAccent)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text("Awaiting telemetry data...", color = TextSecondary)
+                            }
+                        } else {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp)
+                            ) {
+                                itemsIndexed(
+                                    packetHistory.sortedByDescending { it.currentPacketId }
+                                ) { index, packet ->
+                                    DataLoggerPacketCard(
+                                        packet = packet,
+                                        isFirst = index == 0
+                                    )
+                                }
+                            }
+                        }
+
+                        DraggableScrollbar(
+                            state = listState,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 4.dp)
+                        )
+                    }
                 }
             }
         }

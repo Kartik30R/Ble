@@ -19,8 +19,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
  import com.blesense.app.coreui.constants.AppStrings
-import com.blesense.app.coreui.theme.ThemeManager
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
+import com.blesense.app.coreui.theme.*
 import kotlinx.coroutines.delay
 
 
@@ -30,11 +30,8 @@ fun SplashScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
-     val isDarkMode by ThemeManager.isDarkMode.collectAsState()
-
-
-    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color.White
-    val textColor = if (isDarkMode) Color.White else Color.Black
+    // Theme logic handled by modifiers now
+    val textColor = TextPrimary
 
      LaunchedEffect(Unit) {
         delay(2000L)
@@ -70,7 +67,7 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor),
+            .neumorphicBackground(),
         contentAlignment = Alignment.Center
     ) {
         Column(

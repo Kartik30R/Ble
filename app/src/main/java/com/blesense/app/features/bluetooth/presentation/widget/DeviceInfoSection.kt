@@ -12,77 +12,77 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blesense.app.coreui.constants.AppStrings
 
+import com.blesense.app.coreui.components.GlassCard
+import com.blesense.app.coreui.components.GlassInsetBox
+import com.blesense.app.coreui.theme.TextPrimary
+import com.blesense.app.coreui.theme.TextSecondary
+import com.blesense.app.features.bluetooth.domain.model.SensorData
+
 @Composable
 fun DeviceInfoSection(
     deviceName: String,
     deviceAddress: String,
-    deviceId: String
+    sensorData: SensorData?
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        // Device Identity Card
-        InfoCard(
-            label = AppStrings.DEVICE_NAME_LABEL,
-            value = "$deviceName ($deviceAddress)",
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Node ID Card
-        InfoCard(
-            label = AppStrings.NODE_ID_LABEL,
-            value = deviceId,
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        )
+    val nodeID = when (sensorData) {
+        is SensorData.SHT40Data -> sensorData.deviceId
+        is SensorData.SDTData -> sensorData.deviceId
+        is SensorData.LIS2DHData -> sensorData.deviceId
+        is SensorData.SoilSensorData -> sensorData.deviceId
+        is SensorData.LuxSensorData -> sensorData.deviceId
+        is SensorData.AmmoniaSensorData -> sensorData.deviceId
+        is SensorData.TempLoggerData -> sensorData.deviceId
+        is SensorData.DataLoggerData -> sensorData.deviceId
+        is SensorData.Sen6xData -> sensorData.deviceId
+        else -> "--"
     }
-}
 
-@Composable
-fun InfoCard(
-    label: String,
-    value: String,
-    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceVariant,
-    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant
-) {
-    ElevatedCard(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 80.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = containerColor,
-            contentColor = contentColor
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+            .padding(vertical = 8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = contentColor.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Recessed (Inset) Icon Pillar
+            GlassInsetBox(
+                modifier = Modifier.size(56.dp),
+                cornerShape = androidx.compose.foundation.shape.CircleShape
+            ) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = com.blesense.app.R.drawable.bg_remove_ble),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = TextPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = deviceName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = deviceAddress,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = "Node ID: $nodeID",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Light
+                )
+            }
         }
     }
 }

@@ -16,6 +16,16 @@ import java.util.Locale
 
 
 
+import com.blesense.app.coreui.components.GlassCard
+import com.blesense.app.coreui.components.GlassInsetBox
+import com.blesense.app.coreui.theme.MintGreenAccent
+import com.blesense.app.coreui.theme.TextPrimary
+import com.blesense.app.coreui.theme.TextSecondary
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+
 @Composable
 fun DataLoggerPacketCard(
     packet: SensorData.DataLoggerData,
@@ -50,117 +60,149 @@ fun DataLoggerPacketCard(
         }
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+    GlassCard(
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
             if (isFirst) {
                 Text(
-                    text = "DataLogger - Large Data Packets",
+                    text = "High-Fidelity Telemetry Packet",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Packet ID: ${packet.currentPacketId}",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MintGreenAccent
+                    )
+                    Text(
+                        text = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(packet.timestamp)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                }
+
+                val byteCount = packet.rawData.split(" ").size
+                GlassInsetBox(
+                    cornerShape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "$byteCount Bytes",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Text(
-                text = "Packet ID: ${packet.currentPacketId}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
+                text = "Accelerometer Samples (80 Points)",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
-                text = "Timestamp: ${
-                    SimpleDateFormat(
-                        "yyyy-MM-dd HH:mm:ss",
-                        Locale.getDefault()
-                    ).format(Date(packet.timestamp))
-                }",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Accelerometer (80 Points)",
-                style = MaterialTheme.typography.labelLarge
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Column(
+            // Recessed Data Grid
+            GlassInsetBox(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 300.dp)
+                    .heightIn(max = 240.dp),
+                cornerShape = RoundedCornerShape(16.dp)
             ) {
+                LazyColumn(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    itemsIndexed(accelPoints) { index, triple ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = String.format("#%02d", index + 1),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary,
+                                modifier = Modifier.width(32.dp)
+                            )
+                            
+                            // X-Axis (Soft Red)
+                            Text(
+                                text = "X: ${triple.first}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (triple.first == "--") TextSecondary else Color(0xFFFF5252),
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
 
-                accelPoints.forEachIndexed { index, triple ->
+                            // Y-Axis (Mint)
+                            Text(
+                                text = "Y: ${triple.second}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (triple.second == "--") TextSecondary else MintGreenAccent,
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "#${(index + 1).toString().padStart(2, '0')}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "${AppStrings.X_AXIS}: ${triple.first}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "${AppStrings.Y_AXIS}: ${triple.second}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "${AppStrings.Z_AXIS}: ${triple.third}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                            // Z-Axis (Cyan)
+                            Text(
+                                text = "Z: ${triple.third}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (triple.third == "--") TextSecondary else Color(0xFF00E5FF),
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val byteCount = packet.rawData.split(" ").size
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "${AppStrings.RAW_DATA} ($byteCount bytes)",
-                style = MaterialTheme.typography.labelLarge
+                text = "Raw Hexadecimal Stream",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Column(
+            GlassInsetBox(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 200.dp)
+                    .heightIn(max = 120.dp),
+                cornerShape = RoundedCornerShape(12.dp)
             ) {
-
-                packet.rawData.chunked(64).forEach { chunk ->
-
-                    Text(
-                        text = chunk,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                Column(modifier = Modifier.padding(12.dp)) {
+                    packet.rawData.chunked(60).forEach { chunk ->
+                        Text(
+                            text = chunk,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Light,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Total payload: $byteCount bytes",
-                style = MaterialTheme.typography.bodyMedium
-            )
         }
     }
 }

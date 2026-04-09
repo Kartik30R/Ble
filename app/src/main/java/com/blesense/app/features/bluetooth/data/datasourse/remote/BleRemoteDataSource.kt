@@ -9,11 +9,14 @@ import kotlinx.coroutines.channels.Channel
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.tasks.await
+
 @Singleton
 class BleRemoteDataSource @Inject constructor(
     private val api: BleApiService
 ) {
-
+    private val auth by lazy { FirebaseAuth.getInstance() }
     private val TAG = "BLE_UPLOAD"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -28,7 +31,6 @@ class BleRemoteDataSource @Inject constructor(
     init {
         startWorker()
     }
-
 
      fun uploadPacket(packet: BlePacketUpload) {
         Log.d(TAG, "📤 Packet queued for upload: ID=${packet.deviceId}, Type=${packet.parsedType}")
@@ -76,10 +78,17 @@ class BleRemoteDataSource @Inject constructor(
         batchBuffer.clear()
 
         try {
+            // 🛡️ Get Firebase Token (Anonymous or Email)
+            val token = auth.currentUser?.getIdToken(true)?.await()?.token
+            if (token == null) {
+                Log.w(TAG, "⚠️ No Firebase token available, skipping batch upload")
+                batchBuffer.addAll(batch)
+                return
+            }
 
-            Log.d(TAG, "🚀 Sending batch to server: size=$batchSize")
+            Log.d(TAG, "🚀 Sending batch to server: size=$batchSize (Authenticated)")
 
-            val response = api.uploadBatch(batch)
+            val response = api.uploadBatch("Bearer $token", batch)
 
             Log.d(TAG, "📡 Response code: ${response.code()}")
             if (response.isSuccessful) {
@@ -95,4 +104,4 @@ class BleRemoteDataSource @Inject constructor(
             batchBuffer.addAll(batch) // restore packets
         }
     }
-}
+}

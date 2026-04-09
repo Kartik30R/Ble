@@ -9,6 +9,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import presentation.viewmodel.BluetoothScanViewModel
 
+import com.blesense.app.coreui.components.GlassInsetBox
+import com.blesense.app.coreui.theme.MintGreenAccent
+import com.blesense.app.coreui.theme.TextPrimary
+import com.blesense.app.coreui.theme.TextSecondary
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+
 @Composable
 fun DataLoggerDisplay(
     viewModel: BluetoothScanViewModel
@@ -16,85 +24,130 @@ fun DataLoggerDisplay(
     val packetHistory by viewModel.dataLoggerPacketHistory.collectAsState()
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
-        Text(
-            text = "Packets History (${packetHistory.size})",
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
+        // Header with Recessed Count Badge
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Live Packet Stream",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            GlassInsetBox(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                cornerShape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "${packetHistory.size} Pkts",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MintGreenAccent,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
 
         // Empty state
         if (packetHistory.isEmpty()) {
-            Text(
-                text = "No packets received yet",
-                color = Color.Gray
-            )
-            return
-        }
-
-        // Use ONLY the latest packet (advertisement-safe)
-        val packet = packetHistory.last()
-
-        Text(
-            text = "Packet ID: ${packet.lastPacketId}",
-            color = Color.Cyan,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val accel = packet.payloadAccel
-
-        if (accel.isEmpty()) {
-            Text(
-                text = "No accelerometer data",
-                color = Color.Gray
-            )
-            return
-        }
-
-        // Show only first 20 points (lightweight)
-        accel.take(20).forEachIndexed { index, triple ->
-
-            val x = triple.first.toInt() and 0xFF
-            val y = triple.second.toInt() and 0xFF
-            val z = triple.third.toInt() and 0xFF
-
-            val isInvalid = (x == 255 && y == 255 && z == 255)
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            GlassInsetBox(
+                modifier = Modifier.fillMaxWidth().height(100.dp),
+                cornerShape = RoundedCornerShape(16.dp)
             ) {
-
                 Text(
-                    text = "#${index + 1}",
-                    color = Color.Gray
-                )
-
-                Text(
-                    text = if (isInvalid) "X: --" else "X: $x",
-                    color = if (isInvalid) Color.Gray else Color.Red
-                )
-
-                Text(
-                    text = if (isInvalid) "Y: --" else "Y: $y",
-                    color = if (isInvalid) Color.Gray else Color.Green
-                )
-
-                Text(
-                    text = if (isInvalid) "Z: --" else "Z: $z",
-                    color = if (isInvalid) Color.Gray else Color.Cyan
+                    text = "Awaiting first data packet...",
+                    color = TextSecondary.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
+            return
+        }
 
-            Spacer(modifier = Modifier.height(4.dp))
+        // Tactical Data View
+        val packet = packetHistory.last()
+        
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = "Tracking Packet ID: ${packet.lastPacketId}",
+                style = MaterialTheme.typography.labelMedium,
+                color = TextSecondary,
+                fontWeight = FontWeight.Medium
+            )
+
+            val accel = packet.payloadAccel
+            if (accel.isEmpty()) {
+                Text("No accelerometer data available", color = TextSecondary)
+                return
+            }
+
+            // Recessed Data Grid
+            GlassInsetBox(
+                modifier = Modifier.fillMaxWidth(),
+                cornerShape = RoundedCornerShape(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Show only first 20 points (lightweight)
+                    accel.take(20).forEachIndexed { index, triple ->
+                        val x = triple.first.toInt() and 0xFF
+                        val y = triple.second.toInt() and 0xFF
+                        val z = triple.third.toInt() and 0xFF
+                        val isInvalid = (x == 255 && y == 255 && z == 255)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = String.format("#%02d", index + 1),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary,
+                                modifier = Modifier.width(32.dp)
+                            )
+
+                            // X-Axis (Soft Red)
+                            Text(
+                                text = if (isInvalid) "X: --" else "X: $x",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isInvalid) TextSecondary else Color(0xFFFF5252),
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            // Y-Axis (Mint)
+                            Text(
+                                text = if (isInvalid) "Y: --" else "Y: $y",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isInvalid) TextSecondary else MintGreenAccent,
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            // Z-Axis (Cyan)
+                            Text(
+                                text = if (isInvalid) "Z: --" else "Z: $z",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isInvalid) TextSecondary else Color(0xFF00E5FF),
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

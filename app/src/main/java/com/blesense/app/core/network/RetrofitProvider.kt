@@ -10,6 +10,7 @@ object RetrofitProvider {
     private const val BASE_URL = "http://${Routes.ip}/"
 
     private val client = OkHttpClient.Builder()
+        .addInterceptor(AuthInterceptor())
         .retryOnConnectionFailure(true)
         .build()
 

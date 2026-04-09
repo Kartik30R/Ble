@@ -20,8 +20,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.blesense.app.R
-import com.blesense.app.coreui.theme.Helvetica
- import kotlin.random.Random
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.coreui.components.*
+import kotlin.random.Random
 
 @Composable
 fun UserProfileCard(
@@ -31,14 +32,11 @@ fun UserProfileCard(
     iconTint: Color,
     userName: String,
     userEmail: String,
+    androidId: String,
     profilePictureUrl: String? = null,
     onLogout: () -> Unit
 ) {
-    ElevatedCard(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = cardBackground
-        ),
+    GlassCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -47,43 +45,46 @@ fun UserProfileCard(
         ) {
 
             /* -------- Avatar -------- */
-
-            if (!profilePictureUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = profilePictureUrl,
-                    contentDescription = "Profile",
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape),
-                    error = painterResource(R.drawable.error),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                val avatarColor = remember { generateRandomColor() }
-                val initials = userName.take(2).uppercase()
-
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(avatarColor),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = initials,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontFamily = Helvetica
-                        ),
-                        textAlign = TextAlign.Center
+            GlassInsetBox(
+                modifier = Modifier.size(64.dp),
+                cornerShape = CircleShape
+            ) {
+                if (!profilePictureUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = profilePictureUrl,
+                        contentDescription = "Profile",
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape),
+                        error = painterResource(R.drawable.error),
+                        contentScale = ContentScale.Crop
                     )
+                } else {
+                    val avatarColor = remember { generateRandomColor() }
+                    val initials = userName.take(2).uppercase()
+
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(avatarColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = initials,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            /* -------- Name + Email -------- */
+            /* -------- Name + Email + ID -------- */
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -102,6 +103,23 @@ fun UserProfileCard(
                     ),
                     color = secondaryTextColor
                 )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "DEVICE_ID: $androidId",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    ),
+                    color = MintGreenAccent.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .background(
+                            color = MintGreenAccent.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                )
             }
 
             /* -------- Logout -------- */
@@ -110,7 +128,7 @@ fun UserProfileCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.Logout,
                     contentDescription = "Logout",
-                    tint = iconTint
+                    tint = MintGreenAccent
                 )
             }
         }

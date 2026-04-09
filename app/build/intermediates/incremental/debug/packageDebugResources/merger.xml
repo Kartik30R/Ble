@@ -3,7 +3,7 @@
         <item name="windowSplashScreenBackground">#FFFFFF</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/bg_remove_2</item>
         <item name="postSplashScreenTheme">@style/Theme.BLEJetpackCompose</item>
-    </style></file><file path="D:\BLE SENSE\Ble\app\src\main\res\values\strings.xml" qualifiers=""><string name="app_name">BLE Sense</string><string name="server_client_id">191296193641-4v0nodopmvanuvbci7155rnfgcrsog23.apps.googleusercontent.com</string></file><file path="D:\BLE SENSE\Ble\app\src\main\res\values\themes.xml" qualifiers=""><style name="Theme.BLEJetpackCompose" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    </style></file><file path="D:\BLE SENSE\Ble\app\src\main\res\values\strings.xml" qualifiers=""><string name="app_name">BLE Sense</string><string name="server_client_id">634409104545-t9obf7nmakk2jhahr31jlaspva4858fb.apps.googleusercontent.com</string></file><file path="D:\BLE SENSE\Ble\app\src\main\res\values\themes.xml" qualifiers=""><style name="Theme.BLEJetpackCompose" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowTranslucentStatus">false</item>

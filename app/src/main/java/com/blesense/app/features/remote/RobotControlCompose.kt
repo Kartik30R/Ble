@@ -31,44 +31,16 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Button
-import androidx.compose.material.Card
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -100,16 +72,46 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.OutputStream
 import java.util.UUID
-import kotlin.random.Random
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.coreui.components.*
+import com.blesense.app.Presentation.widgets.HeaderSection
+import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.rotate
 import com.blesense.app.R
-
-import com.blesense.app.coreui.theme.ThemeManager
+import kotlin.random.Random
 
 // Enum to represent Bluetooth scanning states
 enum class ScanState {
     IDLE, SCANNING
+}
+
+class RobotControlCompose : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Force Landscape for Robot Control
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        
+        // Keep screen on
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        setContent {
+            BleSenseTheme {
+                val navController = rememberNavController()
+                RobotControlScreen(
+                    navController = navController,
+                    onBackPressed = { finish() }
+                )
+            }
+        }
+    }
 }
 
 // ================= BLUETOOTH SCANNING VIEW MODEL =================
@@ -198,105 +200,33 @@ class ClassicBluetoothViewModel : ViewModel() {
     fun stopScan(context: Context) {
         _scanState.value = ScanState.IDLE
         bluetoothAdapter?.cancelDiscovery()
-        if (receiverRegistered) {
-            try {
-                context.unregisterReceiver(deviceReceiver)
-                receiverRegistered = false
-            } catch (e: Exception) {
-                Log.e("ClassicBT", "Error unregistering receiver: ${e.message}")
-            }
-        }
     }
 
     fun clearError() {
         _errorMessage.value = null
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     override fun onCleared() {
         super.onCleared()
-        bluetoothAdapter?.cancelDiscovery()
-    }
-}
-
-// Enable immersive mode for full-screen experience
-fun Activity.enableImmersiveMode() {
-    window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-            )
-}
-
-// ================= ROBOT CONTROL ACTIVITY =================
-class RobotControlCompose : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        )
-        super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
-                ) {
-                    RobotControlScreen(onBackPressed = { finish() })
-                }
-            }
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            enableImmersiveMode()
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        enableImmersiveMode()
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        // Context handle is needed for unregistering - simplified here
     }
 }
 
 // ================= ROBOT CONTROL VIEW MODEL =================
 open class RobotControlViewModel : ViewModel() {
-    private var outputStream: OutputStream? = null
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+    private var outputStream: OutputStream? = null
 
-    init {
-        initBluetooth()
-    }
-
-    private fun initBluetooth() {
-        try {
-            outputStream = BluetoothConnectionManager.bluetoothSocket?.outputStream
-            _isConnected.value = isBluetoothConnected()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    open fun isBluetoothConnected(): Boolean {
-        return BluetoothConnectionManager.isConnected()
-    }
+    open fun isBluetoothConnected(): Boolean = BluetoothConnectionManager.isConnected()
 
     open fun sendCommand(command: String) {
+        if (!isBluetoothConnected()) {
+            _isConnected.value = false
+            return
+        }
         try {
-            Log.d("RobotCommand", "Sending command: $command")
-            if (!isBluetoothConnected()) {
+            if (BluetoothConnectionManager.bluetoothSocket?.isConnected != true) {
                 Log.e("RobotCommand", "Bluetooth not connected!")
                 _isConnected.value = false
                 return
@@ -362,22 +292,21 @@ fun DeviceSelectionDialog(
     onDeviceSelected: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
-    val cardBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val textColor = if (isDarkMode) Color.White else Color.Black
-    val dividerColor = if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFFE0E0E0)
+    val cardBackgroundColor = DarkGradientStart
+    val textColor = TextPrimary
+    val dividerColor = GlassBorderColor
 
     Dialog(onDismissRequest = onDismissRequest) {
-        Card(
-            modifier = Modifier.width(300.dp),
-            backgroundColor = cardBackgroundColor
+        GlassCard(
+            modifier = Modifier.width(320.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "Select a Device",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
+                    text = "SELECT_NODE",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    color = MintGreenAccent
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 if (isScanning) {
@@ -388,7 +317,7 @@ fun DeviceSelectionDialog(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = if (isDarkMode) Color(0xFF64B5F6) else Color(0xFF007AFF)
+                            color = MintGreenAccent
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -407,7 +336,7 @@ fun DeviceSelectionDialog(
                     ) {
                         Text(
                             text = if (isScanning) "Searching..." else "No devices found",
-                            color = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray,
+                            color = TextSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -423,30 +352,29 @@ fun DeviceSelectionDialog(
                                 onClick = { onDeviceSelected(device.address) },
                                 textColor = textColor
                             )
-                            Divider(color = dividerColor)
+                            HorizontalDivider(color = dividerColor)
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismissRequest) {
                         Text(
-                            text = "Cancel",
-                            color = textColor
+                            text = "DISMISS",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { onDismissRequest() }
-                    ) {
-                        Text(
-                            text = "Close",
-                            color = if (isDarkMode) Color.White else Color.Black
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    NeonPillButton(
+                        text = "CLOSE",
+                        onClick = onDismissRequest,
+                        modifier = Modifier.height(40.dp)
+                    )
                 }
             }
         }
@@ -490,23 +418,19 @@ private fun DeviceItem(
 @Composable
 fun RobotControlScreen(
     viewModel: RobotControlViewModel = viewModel(),
+    navController: androidx.navigation.NavController,
     onBackPressed: () -> Unit
 ) {
     val context = LocalContext.current
     val bluetoothViewModel: ClassicBluetoothViewModel = viewModel()
     val configuration = LocalConfiguration.current
     var isConnected by remember { mutableStateOf(BluetoothConnectionManager.isConnected()) }
-    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
-    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF2F2F7)
-    val textColor = if (isDarkMode) Color.White else Color.Black
-    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray
-    val iconTint = if (isDarkMode) Color(0xFF64B5F6) else Color(0xFF007AFF)
+    val isDarkMode = true 
+    val backgroundColor = DarkGradientStart
+    val textColor = TextPrimary
+    val secondaryTextColor = TextSecondary
+    val iconTint = MintGreenAccent
 
-    if (configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) {
-        LaunchedEffect(Unit) {
-            // Optional: Handle rotation
-        }
-    }
     var selectedSensor by remember { mutableStateOf(SensorItem(0, "Select Sensor")) }
     var showDialog by remember { mutableStateOf(false) }
     var dialogContent by remember { mutableStateOf("") }
@@ -542,8 +466,6 @@ fun RobotControlScreen(
         if (allGranted) {
             bluetoothViewModel.startScan(context)
             showDeviceDialog = true
-        } else {
-            Toast.makeText(context, "Bluetooth permissions required", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -590,132 +512,149 @@ fun RobotControlScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .neumorphicBackground()
     ) {
-        Image(
-            painter = backgroundPainter,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BackButton(
-                modifier = Modifier.size(60.dp),
-                onClick = onBackPressed,
-                isDarkMode = isDarkMode
+        Column(modifier = Modifier.fillMaxSize()) {
+            HeaderSection(
+                navController = navController,
+                viewModel = null, // Using the local ClassicBluetoothViewModel for discovery
+                deviceAddress = "ROBOT_COMMAND_HUB"
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (isConnected) Color.Green.copy(alpha = 0.7f)
-                        else Color.Red.copy(alpha = 0.7f),
-                        CircleShape
-                    )
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = if (isConnected) "Connected" else "Disconnected",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
+
+            Box(modifier = Modifier.weight(1f)) {
+                // Main Control Area
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left Side: Joysticks/Sensors
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(start = 48.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        VerticalJoystick(
+                            modifier = Modifier.padding(bottom = 32.dp),
+                            onDirectionChange = { command ->
+                                viewModel.sendCommand(command)
+                            },
+                            isDarkMode = isDarkMode
+                        )
+                        
+                        SensorSpinner(
+                            sensorData = sensorData,
+                            selectedSensor = selectedSensor,
+                            onSensorSelected = { sensor ->
+                                selectedSensor = sensor
+                                if (sensor.name != "Select Sensor") {
+                                    viewModel.handleSensorClick(sensor.name) { rawDisplay, allData ->
+                                        dialogContent = "$rawDisplay\n$allData"
+                                        showDialog = true
+                                    }
+                                }
+                            },
+                            isDarkMode = isDarkMode
+                        )
+                    }
+
+                    // Right Side: Action Controls
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(end = 48.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        HorizontalJoystick(
+                            modifier = Modifier.padding(bottom = 32.dp),
+                            onDirectionChange = { direction ->
+                                when (direction) {
+                                    "L" -> viewModel.sendCommand("L")
+                                    "R" -> viewModel.sendCommand("R")
+                                    else -> viewModel.sendCommand("C")
+                                }
+                            },
+                            isDarkMode = isDarkMode
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            BluetoothButton(
+                                onClick = {
+                                    if (BluetoothConnectionManager.isConnected()) {
+                                        BluetoothConnectionManager.disconnect()
+                                        return@BluetoothButton
+                                    }
+                                    val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+                                    if (bluetoothAdapter == null) return@BluetoothButton
+                                    if (!bluetoothAdapter.isEnabled) {
+                                        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                                        bluetoothEnableLauncher.launch(enableBtIntent)
+                                    } else {
+                                        val hasPermissions = bluetoothPermissions.all {
+                                            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                        }
+                                        if (hasPermissions) {
+                                            bluetoothViewModel.startScan(context)
+                                            showDeviceDialog = true
+                                        } else {
+                                            permissionsLauncher.launch(bluetoothPermissions)
+                                        }
+                                    }
+                                },
+                                isDarkMode = isDarkMode
+                            )
+
+                            HornButton(
+                                isBluetoothConnected = isConnected,
+                                onHornActive = { isActive ->
+                                    if (isActive) viewModel.sendCommand("H")
+                                    else viewModel.sendCommand("C")
+                                },
+                                isDarkMode = isDarkMode
+                            )
+                        }
+                    }
+                }
+
+                // Connection Status Floating Pill
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp)
+                ) {
+                    GlassCard {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(
+                                        if (isConnected) Color.Green else Color.Red,
+                                        CircleShape
+                                    )
+                                    .neonGlow(active = isConnected)
+                            )
+                            Text(
+                                text = if (isConnected) "SECURE_LINK: ACTIVE" else "LINK_STATUS: OFFLINE",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isConnected) Color.Green else Color.Red,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                }
             }
         }
-
-        BluetoothButton(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 16.dp),
-            onClick = {
-                if (BluetoothConnectionManager.isConnected()) {
-                    BluetoothConnectionManager.disconnect()
-                    Toast.makeText(context, "Disconnected from device", Toast.LENGTH_SHORT).show()
-                    return@BluetoothButton
-                }
-                val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-                if (bluetoothAdapter == null) {
-                    Toast.makeText(context, "Bluetooth not supported", Toast.LENGTH_SHORT).show()
-                    return@BluetoothButton
-                }
-                if (!bluetoothAdapter.isEnabled) {
-                    val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                    bluetoothEnableLauncher.launch(enableBtIntent)
-                } else {
-                    val hasPermissions = bluetoothPermissions.all {
-                        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                    }
-                    if (hasPermissions) {
-                        bluetoothViewModel.startScan(context)
-                        showDeviceDialog = true
-                    } else {
-                        permissionsLauncher.launch(bluetoothPermissions)
-                    }
-                }
-            },
-            isDarkMode = isDarkMode
-        )
-
-        SensorSpinner(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(top = 60.dp),
-            sensorData = sensorData,
-            selectedSensor = selectedSensor,
-            onSensorSelected = { sensor ->
-                selectedSensor = sensor
-                if (sensor.name != "Select Sensor") {
-                    viewModel.handleSensorClick(sensor.name) { rawDisplay, allData ->
-                        dialogContent = "$rawDisplay\n$allData"
-                        showDialog = true
-                    }
-                }
-            },
-            isDarkMode = isDarkMode
-        )
-
-        HornButton(
-            modifier = Modifier.align(Alignment.BottomEnd),
-            isBluetoothConnected = isConnected,
-            onHornActive = { isActive ->
-                if (isActive) {
-                    viewModel.sendCommand("H")
-                } else {
-                    viewModel.sendCommand("C")
-                }
-            },
-            isDarkMode = isDarkMode
-        )
-
-        VerticalJoystick(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 32.dp),
-            onDirectionChange = { command ->
-                viewModel.sendCommand(command)
-            },
-            isDarkMode = isDarkMode
-        )
-
-        HorizontalJoystick(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 32.dp),
-            onDirectionChange = { direction ->
-                when (direction) {
-                    "L" -> viewModel.sendCommand("L")
-                    "R" -> viewModel.sendCommand("R")
-                    else -> viewModel.sendCommand("C")
-                }
-            },
-            isDarkMode = isDarkMode
-        )
     }
 
     if (showDialog) {
@@ -749,31 +688,7 @@ fun RobotControlScreen(
     }
 }
 
-@Composable
-fun BackButton(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    isDarkMode: Boolean
-) {
-    val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(300), label = "")
-    val buttonBackgroundColor = if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFF007AFF).copy(alpha = 0.3f)
-    Box(
-        modifier = modifier
-            .size(60.dp)
-            .clip(CircleShape)
-            .background(buttonBackgroundColor, CircleShape)
-            .clickable { onClick() }
-            .scale(scale),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_back_arrow),
-            contentDescription = "Back Button",
-            tint = if (isDarkMode) Color.White else Color.White,
-            modifier = Modifier.size(30.dp)
-        )
-    }
-}
+// BackButton is deprecated as HeaderSection handles navigation
 
 @Composable
 fun BluetoothButton(
@@ -781,22 +696,18 @@ fun BluetoothButton(
     onClick: () -> Unit,
     isDarkMode: Boolean
 ) {
-    val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(300), label = "")
-    val buttonBackgroundColor = if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFF007AFF).copy(alpha = 0.3f)
     Box(
         modifier = modifier
-            .size(80.dp)
-            .clip(CircleShape)
-            .background(buttonBackgroundColor, CircleShape)
+            .size(72.dp)
             .clickable { onClick() }
-            .scale(scale),
+            .glassCard(CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_bluetooth),
-            contentDescription = "Bluetooth Button",
-            modifier = Modifier.size(50.dp),
-            colorFilter = if (isDarkMode) ColorFilter.tint(Color.White) else ColorFilter.tint(Color.White)
+        Icon(
+            imageVector = Icons.Default.Bluetooth,
+            contentDescription = "Bluetooth",
+            tint = MintGreenAccent,
+            modifier = Modifier.size(32.dp)
         )
     }
 }
@@ -808,54 +719,41 @@ fun HornButton(
     onHornActive: (Boolean) -> Unit,
     isDarkMode: Boolean
 ) {
-    val context = LocalContext.current
-    var isHornPressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (isHornPressed) 1.2f else 1f,
-        animationSpec = tween(300),
-        label = ""
-    )
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isHornPressed) Color.Red.copy(alpha = 0.3f)
-        else if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFF007AFF).copy(alpha = 0.3f),
-        animationSpec = tween(300),
-        label = "background color animation"
-    )
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    LaunchedEffect(isPressed) {
+        if (isBluetoothConnected) {
+            onHornActive(isPressed)
+        }
+    }
+
     Box(
         modifier = modifier
-            .size(80.dp)
-            .clip(CircleShape)
-            .background(backgroundColor, CircleShape)
-            .pointerInput(isBluetoothConnected) {
-                if (!isBluetoothConnected) {
-                    detectTapGestures {
-                        Toast.makeText(context, "Connect Bluetooth first", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    detectTapGestures(
-                        onPress = {
-                            isHornPressed = true
-                            onHornActive(true)
+            .size(72.dp)
+            .glassCard(CircleShape)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        if (isBluetoothConnected) {
                             try {
+                                onHornActive(true)
                                 awaitRelease()
-                                isHornPressed = false
-                                onHornActive(false)
-                            } catch (e: Exception) {
-                                isHornPressed = false
+                            } finally {
                                 onHornActive(false)
                             }
                         }
-                    )
-                }
+                    }
+                )
             }
-            .scale(scale),
+            .then(if (isPressed) Modifier.neonGlow(active = true, cornerShape = CircleShape) else Modifier),
         contentAlignment = Alignment.Center
     ) {
-        Image(
+        Icon(
             painter = painterResource(id = R.drawable.ic_horn),
-            contentDescription = "Horn Button",
-            modifier = Modifier.size(50.dp),
-            colorFilter = if (isHornPressed) ColorFilter.tint(Color.Red) else if (isDarkMode) ColorFilter.tint(Color.White) else ColorFilter.tint(Color.White)
+            contentDescription = "Horn",
+            tint = if (isPressed) Color.Red else Color.White,
+            modifier = Modifier.size(32.dp)
         )
     }
 }
@@ -871,13 +769,10 @@ fun VerticalJoystick(
     val maxDistance = with(density) { 60.dp.toPx() }
     val deadZone = with(density) { 5.dp.toPx() }
     var currentCommand by remember { mutableStateOf("C") }
-    val joystickBackgroundColor = if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFF007AFF).copy(alpha = 0.3f)
-    val joystickHandleColor = if (isDarkMode) Color(0xFF4A4A4A) else Color.White.copy(alpha = 0.8f)
     Box(
         modifier = modifier
-            .size(150.dp)
-            .background(joystickBackgroundColor, CircleShape)
-            .clip(CircleShape)
+            .size(160.dp)
+            .glassInset(CircleShape)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
@@ -906,13 +801,28 @@ fun VerticalJoystick(
             },
         contentAlignment = Alignment.Center
     ) {
+        // Center marker
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .background(MintGreenAccent.copy(alpha = 0.3f), CircleShape)
+        )
+
+        // Handle
         Box(
             modifier = Modifier
                 .offset { IntOffset(offset.x.toInt(), offset.y.toInt()) }
-                .size(90.dp)
-                .shadow(6.dp, CircleShape)
-                .background(joystickHandleColor, CircleShape)
-        )
+                .size(72.dp)
+                .glassCard(CircleShape)
+                .neonGlow(active = currentCommand != "C", cornerShape = CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack, // Placeholder or custom icon
+                contentDescription = null,
+                tint = if (currentCommand != "C") MintGreenAccent else Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.size(24.dp).rotate(if (currentCommand == "U") 90f else if (currentCommand == "D") 270f else 0f)
+            )
+        }
     }
 }
 
@@ -927,13 +837,10 @@ fun HorizontalJoystick(
     val maxDistance = with(density) { 60.dp.toPx() }
     val deadZone = with(density) { 5.dp.toPx() }
     var currentCommand by remember { mutableStateOf("C") }
-    val joystickBackgroundColor = if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFF007AFF).copy(alpha = 0.3f)
-    val joystickHandleColor = if (isDarkMode) Color(0xFF4A4A4A) else Color.White.copy(alpha = 0.8f)
     Box(
         modifier = modifier
-            .size(150.dp)
-            .background(joystickBackgroundColor, CircleShape)
-            .clip(CircleShape)
+            .size(160.dp)
+            .glassInset(CircleShape)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
@@ -962,13 +869,28 @@ fun HorizontalJoystick(
             },
         contentAlignment = Alignment.Center
     ) {
+        // Center marker
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .background(MintGreenAccent.copy(alpha = 0.3f), CircleShape)
+        )
+
+        // Handle
         Box(
             modifier = Modifier
                 .offset { IntOffset(offset.x.toInt(), offset.y.toInt()) }
-                .size(90.dp)
-                .shadow(6.dp, CircleShape)
-                .background(joystickHandleColor, CircleShape)
-        )
+                .size(72.dp)
+                .glassCard(CircleShape)
+                .neonGlow(active = currentCommand != "C", cornerShape = CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = null,
+                tint = if (currentCommand != "C") MintGreenAccent else Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.size(24.dp).rotate(if (currentCommand == "R") 180f else 0f)
+            )
+        }
     }
 }
 
@@ -982,98 +904,76 @@ fun SensorSpinner(
     isDarkMode: Boolean
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val backgroundColor = if (isDarkMode) Color(0xFF2A2A2A) else Color(0xFF007AFF).copy(alpha = 0.3f)
-    val textColor = if (isDarkMode) Color.White else Color.White
-    val dropdownBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val dropdownTextColor = if (isDarkMode) Color.White else Color.Black
-    val iconColor = if (isDarkMode) Color.White else Color.Black
+    val backgroundColor = GlassSurfaceColor
+    val textColor = TextPrimary
+    val dropdownBackgroundColor = DarkGradientStart
+    val dropdownTextColor = TextPrimary
+    val iconColor = TextPrimary
     val context = LocalContext.current
     Box(
-        modifier = modifier.width(150.dp),
+        modifier = modifier.width(200.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .background(backgroundColor, CircleShape)
-                .padding(12.dp)
+                .glassInset(CircleShape)
                 .clickable { expanded = true }
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             if (selectedSensor.iconResId != 0) {
-                val drawable = context.resources.getDrawable(selectedSensor.iconResId, null)
-                Image(
-                    bitmap = drawable.toBitmap().asImageBitmap(),
+                Icon(
+                    painter = painterResource(id = selectedSensor.iconResId),
                     contentDescription = selectedSensor.name,
-                    modifier = Modifier.size(24.dp),
-                    colorFilter = ColorFilter.tint(iconColor)
+                    modifier = Modifier.size(20.dp),
+                    tint = MintGreenAccent
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Text(
-                text = selectedSensor.name,
-                color = textColor,
-                fontSize = 18.sp
+                text = selectedSensor.name.replace(" Sensor", ""),
+                color = TextPrimary,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
             )
         }
+        
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier
-                .width(180.dp)
-                .background(dropdownBackgroundColor)
+                .width(220.dp)
+                .background(DarkGradientStart)
+                .border(1.dp, GlassBorderColor, RoundedCornerShape(12.dp))
         ) {
             sensorData.forEach { sensor ->
                 DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (sensor.iconResId != 0) {
+                                Icon(
+                                    painter = painterResource(id = sensor.iconResId),
+                                    contentDescription = sensor.name,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = if (selectedSensor == sensor) MintGreenAccent else TextSecondary
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+                            Text(
+                                text = sensor.name,
+                                color = if (selectedSensor == sensor) MintGreenAccent else TextPrimary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    },
                     onClick = {
                         onSensorSelected(sensor)
                         expanded = false
                     }
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (sensor.iconResId != 0) {
-                            val drawable = context.resources.getDrawable(sensor.iconResId, null)
-                            Image(
-                                bitmap = drawable.toBitmap().asImageBitmap(),
-                                contentDescription = sensor.name,
-                                modifier = Modifier.size(24.dp),
-                                colorFilter = ColorFilter.tint(iconColor)
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = sensor.name,
-                            color = dropdownTextColor
-                        )
-                    }
-                }
+                )
             }
         }
     }
-}
-
-@SuppressLint("AutoboxingStateCreation")
-@Composable
-fun FloatingJoystickView(
-    modifier: Modifier = Modifier,
-    onDirectionChange: (String) -> Unit
-) {
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
-    Box(
-        modifier = Modifier
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        offsetX += dragAmount.x
-                        offsetY += dragAmount.y
-                    }
-                )
-            }
-            .zIndex(1f)
-    )
 }
 
 @Composable
@@ -1083,26 +983,40 @@ fun SensorDataDialog(
     onDismiss: () -> Unit,
     isDarkMode: Boolean
 ) {
-    val cardBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val textColor = if (isDarkMode) Color.White else Color.Black
+    val cardBackgroundColor = DarkGradientStart
+    val textColor = TextPrimary
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .width(300.dp)
-                .padding(16.dp),
-            backgroundColor = cardBackgroundColor
+        GlassCard(
+            modifier = Modifier.width(320.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = sensorName,
-                    fontSize = 20.sp,
-                    color = textColor
+                    text = sensorName.uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                    color = MintGreenAccent
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = content,
-                    fontSize = 16.sp,
-                    color = textColor
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = GlassBorderColor)
+                
+                GlassInsetBox(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    cornerShape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                NeonPillButton(
+                    text = "DISMISS_TELEMETRY",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -1193,5 +1107,10 @@ object BluetoothConnectionManager {
 @Preview(showBackground = true)
 @Composable
 fun PreviewRobotControlScreen() {
-    RobotControlScreen(viewModel = FakeRobotControlViewModel(), onBackPressed = {})
+    val navController = rememberNavController()
+    RobotControlScreen(
+        viewModel = FakeRobotControlViewModel(),
+        navController = navController,
+        onBackPressed = {}
+    )
 }

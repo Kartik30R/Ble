@@ -5,9 +5,11 @@ import android.util.Log
 import android.provider.Settings
 import com.blesense.app.app.Routes
 import com.blesense.app.features.bluetooth.data.entity.BlePacketUpload
+import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.tasks.await
 import okhttp3.*
 
 object BleWebSocketManager {
@@ -35,8 +37,9 @@ object BleWebSocketManager {
         ) ?: "unknown_mobile"
     }
 
-    private fun getIngestUrl(context: Context): String {
-        return "ws://${Routes.ip}/ws/ingest?clientId=${getMobileId(context)}"
+    private fun getIngestUrl(context: Context, token: String? = null): String {
+        val baseUrl = "ws://${Routes.ip}/ws/ingest?clientId=${getMobileId(context)}"
+        return if (token != null) "$baseUrl&token=$token" else baseUrl
     }
 
     private fun getStreamUrl(): String {
@@ -45,20 +48,30 @@ object BleWebSocketManager {
 
     fun connect(context: Context) {
         appContext = context.applicationContext
-
+ 
         if (ingestSocket != null) {
             Log.v(TAG, "Ingest WS already exists")
             return
         }
-
-        val url = getIngestUrl(context)
-        Log.i(TAG, "🔗 Connecting to Ingest WS: $url")
-
-        val request = Request.Builder()
-            .url(url)
-            .build()
-
-        ingestSocket = client.newWebSocket(request, ingestListener)
+ 
+        scope.launch {
+            try {
+                val token = FirebaseAuth.getInstance().currentUser?.getIdToken(true)?.await()?.token
+                val url = getIngestUrl(context, token)
+                Log.i(TAG, "🔗 Connecting to Ingest WS (Authenticated: ${token != null})")
+ 
+                val request = Request.Builder()
+                    .url(url)
+                    .build()
+ 
+                ingestSocket = client.newWebSocket(request, ingestListener)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to connect WS: ${e.message}")
+                // Retry after delay
+                delay(5000)
+                connect(context)
+            }
+        }
     }
 
     fun disconnect() {

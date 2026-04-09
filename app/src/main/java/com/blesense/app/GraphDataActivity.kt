@@ -25,7 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.blesense.app.coreui.theme.ThemeManager
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.coreui.components.*
 
 /**
  * ChartScreen2 - A modern, responsive sensor dashboard screen with:
@@ -41,9 +42,6 @@ fun ChartScreen2(navController: NavController, title: String?, value: String?) {
     val actualTitle = title ?: "Unknown Title"
     // Unused value parameter (can be used later for real-time value display)
     value ?: "Unknown Value"
-
-    // Observe current theme mode (dark/light) from ThemeManager
-    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
 
     // Hardcoded English strings (ideal for future localization via string resources)
     val unknownTitle = "Unknown Title"
@@ -69,20 +67,8 @@ fun ChartScreen2(navController: NavController, title: String?, value: String?) {
         "$sensorTitlePrefix 3" to "$advertisingType: $bluetooth42\n$dataStatus: $partial\n$primaryPhy: $le1m"
     )
 
-    // Dynamic background gradient based on current theme
-    val backgroundGradient = if (isDarkMode) {
-        Brush.verticalGradient(listOf(Color(0xFF121212), Color(0xFF424242)))
-    } else {
-        Brush.verticalGradient(listOf(Color.White, Color.LightGray))
-    }
-
-    // Theme-aware color palette
-    val appBarBackground = if (isDarkMode) Color(0xFF121212) else Color.White
-    val cardBackground = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val chartBackground = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val textColor = if (isDarkMode) Color.White else Color.Black
-    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray
-    val chartLineColor = if (isDarkMode) Color(0xFFBB86FC) else Color.Blue
+    // Glass properties directly applied via custom theme overrides
+    val chartLineColor = MintGreenAccent
 
     // State to manage LazyColumn scroll position
     val listState = rememberLazyListState()
@@ -110,7 +96,7 @@ fun ChartScreen2(navController: NavController, title: String?, value: String?) {
                     Text(
                         text = if (title == null) unknownTitle else actualTitle,
                         fontSize = 20.sp,
-                        color = textColor
+                        color = TextPrimary
                     )
                 },
                 navigationIcon = {
@@ -118,29 +104,30 @@ fun ChartScreen2(navController: NavController, title: String?, value: String?) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = textColor
+                            tint = TextPrimary
                         )
                     }
                 },
-                backgroundColor = appBarBackground,
-                elevation = 4.dp
+                backgroundColor = Color.Transparent,
+                elevation = 0.dp
             )
         },
-        backgroundColor = Color.Transparent // Allows gradient background to show through
+        backgroundColor = Color.Transparent
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundGradient)
+                .neumorphicBackground()
                 .padding(paddingValues)
         ) {
             // Animated collapsing chart header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(16.dp)
                     .height((200 * scale).dp)
                     .scale(scale)
-                    .background(chartBackground),
+                    .glassCard(cornerShape = RoundedCornerShape(20.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 DynamicChart(
@@ -161,10 +148,7 @@ fun ChartScreen2(navController: NavController, title: String?, value: String?) {
                 itemsIndexed(sensorData) { _, (itemTitle, itemValue) ->
                     RoundedSensorCard(
                         title = itemTitle,
-                        value = itemValue,
-                        cardBackground = cardBackground,
-                        textColor = textColor,
-                        secondaryTextColor = secondaryTextColor
+                        value = itemValue
                     )
                 }
             }
@@ -178,31 +162,25 @@ fun ChartScreen2(navController: NavController, title: String?, value: String?) {
 @Composable
 fun RoundedSensorCard(
     title: String,
-    value: String,
-    cardBackground: Color,
-    textColor: Color,
-    secondaryTextColor: Color
+    value: String
 ) {
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        shape = RoundedCornerShape(16.dp),
-        elevation = 4.dp,
-        backgroundColor = cardBackground
+            .padding(8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Text(
                 text = title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = textColor
+                color = TextPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
                 fontSize = 14.sp,
-                color = secondaryTextColor
+                color = TextSecondary
             )
         }
     }

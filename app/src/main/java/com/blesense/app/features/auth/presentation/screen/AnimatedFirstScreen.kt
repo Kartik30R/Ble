@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -22,7 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blesense.app.R
 import com.blesense.app.coreui.constants.AppStrings
-import com.blesense.app.coreui.theme.BleSenseTheme
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.coreui.components.NeonPillButton
 
 @Composable
 fun AnimatedFirstScreen(
@@ -46,9 +48,9 @@ fun AnimatedFirstScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .neumorphicBackground()
         ) {
-            // ---- Animated background shape ----
+            // ---- Animated background glow ----
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -74,8 +76,13 @@ fun AnimatedFirstScreen(
                         }
                         addPath(path)
                     })
-                    // Using secondaryContainer for the decorative shape
-                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
+                    .background(MintGreenAccent.copy(alpha = 0.03f))
+                    // apply blur if possible to soften the shape
+                    .let {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            it.blur(50.dp)
+                        } else it
+                    }
             )
 
             // ---- Main content ----
@@ -98,76 +105,50 @@ fun AnimatedFirstScreen(
                 Text(
                     text = AppStrings.APP_NAME,
                     style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = TextPrimary,
                     modifier = Modifier.padding(bottom = 120.dp)
                 )
 
                 Spacer(modifier = Modifier.height(40.dp))
 
-                // ---- Login button ----
-                Button(
-                    onClick = onNavigateToLogin,
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                ) {
-                    Text(
-                        text = AppStrings.LOGIN,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ---- Sign-up button ----
-                OutlinedButton(
-                    onClick = onNavigateToSignup,
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(
-                        text = AppStrings.SIGN_UP,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // ---- OR divider ----
+                /* -------- Action Buttons -------- */
                 Row(
-                    modifier = Modifier.fillMaxWidth(0.7f),
-                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    HorizontalDivider(
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.outlineVariant
+                    // ---- Login button ----
+                    NeonPillButton(
+                        text = AppStrings.LOGIN,
+                        onClick = onNavigateToLogin,
+                        isActive = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
                     )
-                    Text(
-                        text = "  OR  ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.outlineVariant
+
+                    // ---- Sign-up button ----
+                    NeonPillButton(
+                        text = AppStrings.SIGN_UP,
+                        onClick = onNavigateToSignup,
+                        isActive = false, // renders inactive dark button
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // ---- OR text ----
+                Text(
+                    text = "OR",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
 
                 // ---- Guest / Loading ----
                 if (isLoading) {
@@ -179,7 +160,7 @@ fun AnimatedFirstScreen(
                     Text(
                         text = "Continue as Guest", // Note: Add this to AppStrings later!
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MintGreenAccent,
                         modifier = Modifier
                             .clickable(
                                 indication = null,

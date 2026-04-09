@@ -30,10 +30,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 import com.blesense.app.core.common.google.GoogleSignInHelper
- import com.blesense.app.features.auth.presentation.viewmodel.AuthState
+import com.blesense.app.features.auth.presentation.viewmodel.AuthState
 import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
+
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.coreui.components.*
 
 
 @Composable
@@ -103,7 +106,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.background)
+            .neumorphicBackground()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -113,13 +116,13 @@ fun LoginScreen(
         Text(
             text = "Welcome Back",
             style = typography.headlineLarge,
-            color = colors.onBackground
+            color = TextPrimary
         )
 
         Text(
             text = "Sign in to continue",
             style = typography.titleMedium,
-            color = colors.onBackground.copy(alpha = 0.7f)
+            color = TextSecondary
         )
 
         Spacer(Modifier.height(80.dp))
@@ -150,36 +153,30 @@ fun LoginScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        Button(
+        NeonPillButton(
+            text = "Sign In",
             onClick = { viewModel.login(email.trim(), password) },
-            enabled = isFormValid && authState !is AuthState.Loading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = shapes.medium
-        ) {
-            Text("Sign In")
-        }
+            isActive = isFormValid && authState !is AuthState.Loading,
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        )
 
         Spacer(Modifier.height(40.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            HorizontalDivider(Modifier.weight(1f))
             Text(
                 "Or continue with",
                 Modifier.padding(12.dp),
                 style = typography.labelLarge,
-                color = colors.onBackground.copy(alpha = 0.6f)
+                color = TextSecondary
             )
-            HorizontalDivider(Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(20.dp))
 
-        OutlinedButton(
-            onClick = { launcher.launch(googleSignInClient.signInIntent) },
+        // Glass button for Google Sign In
+        GlassCard(
             modifier = Modifier.size(64.dp),
-            shape = shapes.medium
+            onClick = { launcher.launch(googleSignInClient.signInIntent) }
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.google_g),
@@ -191,7 +188,7 @@ fun LoginScreen(
         Spacer(Modifier.weight(1f))
 
         TextButton(onClick = onNavigateToRegister) {
-            Text("Create account")
+            Text("Create account", color = MintGreenAccent)
         }
     }
 
@@ -315,16 +312,16 @@ private fun PasswordTextField(
             }
         },
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = colors.surface,
-            unfocusedContainerColor = colors.surface,
-            disabledContainerColor = colors.surface,
-            focusedIndicatorColor = colors.primary,
-            unfocusedIndicatorColor = colors.outline,
+            focusedContainerColor = GlassSurfaceColor,
+            unfocusedContainerColor = GlassSurfaceColor,
+            disabledContainerColor = GlassSurfaceColor,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
             errorIndicatorColor = colors.error,
-            focusedTextColor = colors.onSurface,
-            unfocusedTextColor = colors.onSurface
+            focusedTextColor = TextPrimary,
+            unfocusedTextColor = TextPrimary
         ),
-        shape = shapes.medium,
+        shape = RoundedCornerShape(20.dp),
         textStyle = typography.bodyMedium
     )
 }
@@ -367,16 +364,16 @@ private fun EmailTextField(
             }
         },
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = colors.surface,
-            unfocusedContainerColor = colors.surface,
-            disabledContainerColor = colors.surface,
-            focusedIndicatorColor = colors.primary,
-            unfocusedIndicatorColor = colors.outline,
+            focusedContainerColor = GlassSurfaceColor,
+            unfocusedContainerColor = GlassSurfaceColor,
+            disabledContainerColor = GlassSurfaceColor,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
             errorIndicatorColor = colors.error,
-            focusedTextColor = colors.onSurface,
-            unfocusedTextColor = colors.onSurface
+            focusedTextColor = TextPrimary,
+            unfocusedTextColor = TextPrimary
         ),
-        shape = shapes.medium,
+        shape = RoundedCornerShape(20.dp),
         textStyle = typography.bodyMedium
     )
 }

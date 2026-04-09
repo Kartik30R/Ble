@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Help
 import androidx.compose.material.icons.outlined.*
@@ -23,6 +24,9 @@ import com.blesense.app.features.auth.presentation.viewmodel.AuthViewModel
 import com.blesense.app.features.settings.domain.model.SettingsItem
 import com.blesense.app.features.settings.domain.model.SettingsItemType
 import com.blesense.app.features.settings.presentation.dialogs.AccountsDialog
+import com.blesense.app.coreui.components.GlassSwitch
+import com.blesense.app.coreui.components.GlassInsetBox
+import com.blesense.app.coreui.theme.MintGreenAccent
 
 
 @Composable
@@ -50,6 +54,8 @@ fun SettingsItemRow(
     val isHelpItem = item.icon == Icons.AutoMirrored.Outlined.Help
     val isAccountsItem = item.icon == Icons.Outlined.AccountCircle
 
+
+
     /* ---------------- Row ---------------- */
 
     Row(
@@ -65,30 +71,33 @@ fun SettingsItemRow(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Icon(
-            imageVector = item.icon,
-            contentDescription = item.title,
-            tint = iconTint,
-            modifier = Modifier.size(24.dp)
-        )
+        // Recessed (Inset) Icon Container
+        GlassInsetBox(
+            modifier = Modifier.size(42.dp),
+            cornerShape = RoundedCornerShape(10.dp)
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = item.title,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.width(16.dp))
 
         Text(
             text = item.title,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Medium,
-                fontFamily = Helvetica
+                fontWeight = FontWeight.Medium
             ),
             color = textColor,
             modifier = Modifier.weight(1f)
         )
 
         when (item.type) {
-
             SettingsItemType.SWITCH -> {
-                Switch(
+                GlassSwitch(
                     checked = switchState,
                     onCheckedChange = {
                         switchState = it
@@ -101,7 +110,8 @@ fun SettingsItemRow(
                 Icon(
                     imageVector = Icons.Outlined.ChevronRight,
                     contentDescription = "Navigate",
-                    tint = secondaryTextColor
+                    tint = secondaryTextColor,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

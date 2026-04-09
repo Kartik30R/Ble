@@ -21,16 +21,15 @@ import presentation.viewmodel.BluetoothScanViewModel
 @Composable
 fun HeaderSection(
     navController: NavController,
-    viewModel: BluetoothScanViewModel,
-    deviceAddress: String,
-    showGraphButton: Boolean   // ← add this
+    viewModel: BluetoothScanViewModel? = null,
+    deviceAddress: String
 ) {
 
     CenterAlignedTopAppBar(
 
         title = {
             Text(
-                text = AppStrings.ADVERTISING_DATA_TITLE,
+                text = deviceAddress,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge
             )
@@ -39,7 +38,7 @@ fun HeaderSection(
         navigationIcon = {
             IconButton(
                 onClick = {
-                    viewModel.stopScan()
+                    viewModel?.stopScan()
                     navController.popBackStack()
                 }
             ) {
@@ -49,23 +48,5 @@ fun HeaderSection(
                 )
             }
         },
-
-        actions = {
-
-            if (showGraphButton) {   // ← condition here
-
-                IconButton(
-                    onClick = {
-                        val encoded = Uri.encode(deviceAddress)
-                        navController.navigate("chart_screen/$encoded")
-                    }
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.graph),
-                        contentDescription = "Graph"
-                    )
-                }
-            }
-        }
     )
 }

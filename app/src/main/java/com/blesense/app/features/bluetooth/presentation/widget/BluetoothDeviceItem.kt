@@ -19,85 +19,108 @@ import com.blesense.app.features.bluetooth.domain.model.SensorData
 import java.text.SimpleDateFormat
 import java.util.*
 import com.blesense.app.R
+import com.blesense.app.coreui.components.GlassCard
+import com.blesense.app.coreui.components.GlassInsetBox
+import com.blesense.app.coreui.theme.*
 
 @Composable
 fun BluetoothDeviceItem(
-    device: BleDevice, // Using Domain Model
+    device: BleDevice,
     navController: NavHostController,
     selectedSensor: String,
     isDarkMode: Boolean
 ) {
-    Row(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp)
-             .clickable {
-                 val safeDeviceId = if (device.deviceId.isNullOrBlank()) "unknown" else device.deviceId
-
-                 val safeName = device.name.replace("/", "-").ifBlank { "Unknown" }
-
-                navController.navigate(
-                    "advertising/$safeName/${device.address}/$selectedSensor/$safeDeviceId"
-                )
-            },
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        onClick = {
+            val safeDeviceId = if (device.deviceId.isNullOrBlank()) "unknown" else device.deviceId
+            val safeName = device.name.replace("/", "-").ifBlank { "Unknown" }
+            navController.navigate(
+                "advertising/$safeName/${device.address}/$selectedSensor/$safeDeviceId"
+            )
+        }
     ) {
-        // Bluetooth icon container using M3 ColorScheme
-        Surface(
-            modifier = Modifier.size(48.dp),
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.primaryContainer
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            // Recessed (Inset) Icon Container
+            GlassInsetBox(
+                modifier = Modifier.size(52.dp),
+                cornerShape = RoundedCornerShape(14.dp)
+            ) {
                 Icon(
                     painter = painterResource(id = R.drawable.bluetooth),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    modifier = Modifier.size(26.dp),
+                    tint = MintGreenAccent
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-        // Device information column
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = device.name, 
-                style = MaterialTheme.typography.titleMedium, 
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Address: ${device.address} | RSSI: ${device.rssi} dBm", 
-                style = MaterialTheme.typography.bodySmall, 
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // Display sensor-specific data preview
-            device.sensorData?.let { data ->
-                val displayText = getPreviewText(selectedSensor, data)
-
-                // Special preview for DataLogger
-                if (selectedSensor == "DataLogger" && data is SensorData.DataLoggerData) {
-                    DataLoggerPreview(
-                        rawData = displayText,
-                        modifier = Modifier.padding(top = 8.dp)
+            // Device information
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = device.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Address: ${device.address}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_turbo), // Using as signal icon
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MintGreenAccent.copy(alpha = 0.7f)
                     )
-                } else {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.SemiBold
+                        text = "${device.rssi} dBm",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MintGreenAccent
                     )
                 }
-            } ?: Text(
-                "Waiting for data...", 
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Sensor preview
+                device.sensorData?.let { data ->
+                    val displayText = getPreviewText(selectedSensor, data)
+                    if (selectedSensor == "DataLogger" && data is SensorData.DataLoggerData) {
+                        DataLoggerPreview(
+                            rawData = displayText,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    } else {
+                        Text(
+                            text = displayText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MintGreenAccent,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                } ?: Text(
+                    "Waiting for data...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextDisabled
+                )
+            }
         }
     }
 }

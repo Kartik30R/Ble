@@ -116,6 +116,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation(libs.material3)
     implementation(libs.ui.graphics)
+    implementation(libs.foundation)
 
     // ==================== TESTING ====================
     testImplementation(libs.junit)

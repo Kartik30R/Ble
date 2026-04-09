@@ -10,7 +10,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,6 +45,9 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.blesense.app.R
 import com.blesense.app.coreui.theme.BleSenseTheme
+import com.blesense.app.coreui.components.*
+import com.blesense.app.coreui.theme.*
+import com.blesense.app.Presentation.widgets.HeaderSection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -112,8 +115,8 @@ fun AdvertisingScreen(navController: NavHostController) {
         val context = LocalContext.current
         val scope   = rememberCoroutineScope()
 
-        var isAdvertising       by remember { mutableStateOf(false) }
-        var hasPermissions      by remember { mutableStateOf(checkAdvertisingPermissions(context)) }
+        var isAdvActive         by remember { mutableStateOf(false) }
+        var hasBleAdvPermissions by remember { mutableStateOf(checkAdvertisingPermissions(context)) }
         var selectedRemote      by remember { mutableStateOf(RemoteType.REMOTE_1) }
         var selectedCommands    by remember { mutableStateOf(setOf(LEDCommand.SOLID_RED)) }
         var cycleIntervalSeconds by remember { mutableStateOf(2) }
@@ -140,7 +143,7 @@ fun AdvertisingScreen(navController: NavHostController) {
 
         // 🔄 DISCO LOOP: High-speed counter for strobe effect
         LaunchedEffect(isDiscoEnabled, discoSpeedMs) {
-            if (isDiscoEnabled && isAdvertising) {
+            if (isDiscoEnabled && isAdvActive) {
                 while (true) {
                     delay(discoSpeedMs)
                     discoCounter++
@@ -175,7 +178,7 @@ fun AdvertisingScreen(navController: NavHostController) {
 
         // 🔗 LIVE SYNC LOGIC: Automatically update advertising when values change
         LaunchedEffect(activeCommand, sliderValue, selectedRemote) {
-            if (isAdvertising) {
+            if (isAdvActive) {
                 // Adjust debounce for Disco strobe
                 val debounce = if (isDiscoEnabled) (discoSpeedMs / 3).coerceAtMost(100L) else 200L
                 delay(debounce)
@@ -184,7 +187,7 @@ fun AdvertisingScreen(navController: NavHostController) {
 
                 val cb = createAdvertiseCallback(
                     onSuccess = { /* Success state is already handled by outer state */ },
-                    onFailure = { isAdvertising = false }
+                    onFailure = { isAdvActive = false }
                 )
                 currentCallback = cb
 
@@ -217,63 +220,192 @@ fun AdvertisingScreen(navController: NavHostController) {
             }
         }
 
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("LED Remote", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            if (isAdvertising) {
-                                Text("TRANSMITTING", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        /* ---------------- UI ---------------- */
+
+        Box(modifier = Modifier.fillMaxSize().neumorphicBackground()) {
+            Scaffold(
+                containerColor = Color.Transparent,
+                topBar = {
+                    HeaderSection(
+                        navController = navController,
+                        viewModel = null,
+                        deviceAddress = "LED Remote"
+                    )
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    // Scrollable Area
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 1. Status Bar
+                        CompactStatusCard(
+                            isAdvertising = isAdvActive,
+                            time = timeString,
+                            commandName = when {
+                                isDiscoEnabled && isAdvActive -> if (activeCommand.displayName == "DARK") "STROBE: OFF" else "DISCO: ${activeCommand.displayName}"
+                                selectedRemote == RemoteType.REMOTE_3 -> "Intensity: $sliderValue"
+                                else -> if (selectedCommands.size > 1) "${activeCommand.displayName} (Cycle)" else activeCommand.displayName
+                            },
+                            accentColor = when {
+                                isDiscoEnabled && isAdvActive -> activeCommand.color
+                                selectedRemote == RemoteType.REMOTE_3 -> selectedRemote.color
+                                else -> activeCommand.color
+                            },
+                            companyId = if (selectedRemote == RemoteType.REMOTE_3 && !isDiscoEnabled) 0x0001 else activeCommand.companyId,
+                            dataHex = when {
+                                isDiscoEnabled && isAdvActive -> "AA (Disco)"
+                                selectedRemote == RemoteType.REMOTE_1 -> "AA"
+                                selectedRemote == RemoteType.REMOTE_2 -> "BB"
+                                selectedRemote == RemoteType.REMOTE_3 -> "CC ${sliderValue.toString(16).padStart(2,'0').uppercase()}"
+                                else -> "—"
+                            }
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // 2. Mode Selection Tabs
+                        SelectionSection(
+                            selectedRemote = selectedRemote,
+                            onRemoteSelect = { selectedRemote = it }
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // 3. Control Options
+                        Text(
+                            text = when(selectedRemote) {
+                                RemoteType.REMOTE_1 -> "Color Palette Control"
+                                RemoteType.REMOTE_2 -> "Pattern Visualizers"
+                                RemoteType.REMOTE_3 -> "Custom Luminance"
+                            },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp, start = 4.dp)
+                        )
+
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(bottom = 120.dp)
+                        ) {
+                            item {
+                                when (selectedRemote) {
+                                    RemoteType.REMOTE_1 -> {
+                                        DiscoControlCard(
+                                            isEnabled = isDiscoEnabled,
+                                            onToggle = { isDiscoEnabled = it },
+                                            speed = discoSpeedMs,
+                                            onSpeedChange = { discoSpeedMs = it },
+                                            isRandom = isDiscoRandom,
+                                            onRandomToggle = { isDiscoRandom = it },
+                                            isStrobe = isStrobeEnabled,
+                                            onStrobeToggle = { isStrobeEnabled = it }
+                                        )
+                                        Spacer(Modifier.height(20.dp))
+
+                                        CycleIntervalControl(
+                                            interval = cycleIntervalSeconds,
+                                            onIntervalChange = { cycleIntervalSeconds = it },
+                                            accentColor = selectedRemote.color
+                                        )
+                                        Spacer(Modifier.height(20.dp))
+
+                                        availableCommands.chunked(3).forEach { row ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                            ) {
+                                                row.forEach { cmd ->
+                                                    ColorSwatch(
+                                                        modifier = Modifier.weight(1f),
+                                                        command = cmd,
+                                                        isSelected = selectedCommands.contains(cmd),
+                                                        onSelect = { selected ->
+                                                            selectedCommands = if (selectedCommands.contains(selected)) {
+                                                                if (selectedCommands.size > 1) selectedCommands.minus(selected) else selectedCommands
+                                                            } else {
+                                                                selectedCommands.plus(selected)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                                            }
+                                        }
+                                    }
+                                    RemoteType.REMOTE_2 -> {
+                                        availableCommands.forEach { cmd ->
+                                            AnimationListItem(
+                                                command = cmd,
+                                                isSelected = selectedCommands.contains(cmd),
+                                                onSelect = { selected ->
+                                                    selectedCommands = if (selectedCommands.contains(selected)) {
+                                                        if (selectedCommands.size > 1) selectedCommands.minus(selected) else selectedCommands
+                                                    } else {
+                                                        selectedCommands.plus(selected)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                    RemoteType.REMOTE_3 -> {
+                                        IntensitySlider(
+                                            value = sliderValue,
+                                            onValueChange = { sliderValue = it },
+                                            accentColor = activeCommand.color
+                                        )
+                                    }
+                                }
+                            }
+                            item { 
+                                Spacer(Modifier.height(16.dp))
+                                NeonPillButton(
+                                    text = "View Command Logs",
+                                    onClick = { showHistorySheet = true },
+                                    isActive = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(16.dp))
                             }
                         }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { showHistorySheet = true }) {
-                            Icon(Icons.Default.History, contentDescription = "History")
-                        }
-                        IconButton(onClick = { advertisingHistory.clear() }) {
-                            Icon(Icons.Default.DeleteSweep, contentDescription = "Clear All")
-                        }
                     }
-                )
-            },
-            bottomBar = {
-                val hapticPulse by animateFloatAsState(
-                    targetValue = if (isAdvertising) 1.05f else 1f,
-                    animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
-                    label = ""
-                )
 
-                Surface(
-                    tonalElevation = 8.dp,
-                    shadowElevation = 16.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                    // 🕺 Floating Transmit Button Layer
+                    val hapticPulse by animateFloatAsState(
+                        targetValue = if (isAdvActive) 1.05f else 1f,
+                        animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
+                        label = ""
+                    )
+
                     Box(
                         modifier = Modifier
-                            .padding(20.dp)
-                            .navigationBarsPadding()
+                            .fillMaxSize()
+                            .padding(bottom = 32.dp, start = 20.dp, end = 20.dp),
+                        contentAlignment = Alignment.BottomCenter
                     ) {
-                        Button(
+                        NeonPillButton(
+                            text = if (isAdvActive) "STOP TRANSMISSION" else "TRANSMIT COMMAND",
                             onClick = {
-                                if (!hasPermissions) { showPermissionDialog = true; return@Button }
-                                if (isAdvertising) {
+                                if (!hasBleAdvPermissions) { showPermissionDialog = true; return@NeonPillButton }
+                                if (isAdvActive) {
                                     currentCallback?.let { stopAdvertising(bluetoothAdvertiser, it) }
-                                    isAdvertising = false
+                                    isAdvActive = false
                                     advertisingTime = 0
                                     currentCallback = null
                                 } else {
                                     val cb = createAdvertiseCallback(
                                         onSuccess = {
-                                            isAdvertising = true
+                                            isAdvActive = true
                                             scope.launch {
-                                                while (isAdvertising) { delay(1000); advertisingTime++ }
+                                                while (isAdvActive) { delay(1000); advertisingTime++ }
                                             }
                                             val label = if (selectedRemote == RemoteType.REMOTE_3) "Slider: $sliderValue" else activeCommand.displayName
                                             val cId = if (selectedRemote == RemoteType.REMOTE_3) 0x0001 else activeCommand.companyId
@@ -284,7 +416,7 @@ fun AdvertisingScreen(navController: NavHostController) {
                                             }
                                             addToHistory(advertisingHistory, label, selectedRemote, cId, hex)
                                         },
-                                        onFailure = { isAdvertising = false; advertisingTime = 0 }
+                                        onFailure = { isAdvActive = false; advertisingTime = 0 }
                                     )
                                     currentCallback = cb
                                     when {
@@ -297,161 +429,10 @@ fun AdvertisingScreen(navController: NavHostController) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(64.dp)
-                                .scale(if (isAdvertising) hapticPulse else 1f),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isAdvertising) MaterialTheme.colorScheme.error else selectedRemote.color,
-                                contentColor = Color.White
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
-                        ) {
-                            Icon(
-                                if (isAdvertising) Icons.Default.Stop else Icons.Default.BluetoothAudio,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = if (isAdvertising) "STOP ADVERTISING" else "TRANSMIT COMMAND",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
+                                .scale(if (isAdvActive) hapticPulse else 1f),
+                            isActive = true
+                        )
                     }
-                }
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(Modifier.height(12.dp))
-
-                // 1. FIXED: Compact Status Bar
-                CompactStatusCard(
-                    isAdvertising = isAdvertising,
-                    time = timeString,
-                    commandName = when {
-                        isDiscoEnabled && isAdvertising -> if (activeCommand.displayName == "DARK") "STROBE: OFF" else "DISCO: ${activeCommand.displayName}"
-                        selectedRemote == RemoteType.REMOTE_3 -> "Intensity: $sliderValue"
-                        else -> if (selectedCommands.size > 1) "${activeCommand.displayName} (Cycle)" else activeCommand.displayName
-                    },
-                    accentColor = when {
-                        isDiscoEnabled && isAdvertising -> activeCommand.color
-                        selectedRemote == RemoteType.REMOTE_3 -> selectedRemote.color
-                        else -> activeCommand.color
-                    },
-                    companyId = if (selectedRemote == RemoteType.REMOTE_3 && !isDiscoEnabled) 0x0001 else activeCommand.companyId,
-                    dataHex = when {
-                        isDiscoEnabled && isAdvertising -> "AA (Disco)"
-                        selectedRemote == RemoteType.REMOTE_1 -> "AA"
-                        selectedRemote == RemoteType.REMOTE_2 -> "BB"
-                        selectedRemote == RemoteType.REMOTE_3 -> "CC ${sliderValue.toString(16).padStart(2,'0').uppercase()}"
-                        else -> "—"
-                    }
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                // 2. FIXED: Mode Selection Tabs
-                SelectionSection(
-                    selectedRemote = selectedRemote,
-                    onRemoteSelect = { selectedRemote = it }
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                // 3. SCROLLABLE: Control Options
-                Text(
-                    text = when(selectedRemote) {
-                        RemoteType.REMOTE_1 -> "Color Palette"
-                        RemoteType.REMOTE_2 -> "Animation Patterns"
-                        RemoteType.REMOTE_3 -> "Custom Intensity"
-                    },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
-
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        when (selectedRemote) {
-                            RemoteType.REMOTE_1 -> {
-                                DiscoControlCard(
-                                    isEnabled = isDiscoEnabled,
-                                    onToggle = { isDiscoEnabled = it },
-                                    speed = discoSpeedMs,
-                                    onSpeedChange = { discoSpeedMs = it },
-                                    isRandom = isDiscoRandom,
-                                    onRandomToggle = { isDiscoRandom = it },
-                                    isStrobe = isStrobeEnabled,
-                                    onStrobeToggle = { isStrobeEnabled = it }
-                                )
-                                Spacer(Modifier.height(16.dp))
-
-                                CycleIntervalControl(
-                                    interval = cycleIntervalSeconds,
-                                    onIntervalChange = { cycleIntervalSeconds = it },
-                                    accentColor = selectedRemote.color
-                                )
-                                Spacer(Modifier.height(16.dp))
-
-                                availableCommands.chunked(3).forEach { row ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        row.forEach { cmd ->
-                                            ColorSwatch(
-                                                modifier = Modifier.weight(1f),
-                                                command = cmd,
-                                                isSelected = selectedCommands.contains(cmd),
-                                                onSelect = {
-                                                    selectedCommands = if (selectedCommands.contains(it)) {
-                                                        if (selectedCommands.size > 1) selectedCommands - it else selectedCommands
-                                                    } else {
-                                                        selectedCommands + it
-                                                    }
-                                                }
-                                            )
-                                        }
-                                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                                    }
-                                }
-                            }
-                            RemoteType.REMOTE_2 -> {
-                                availableCommands.forEach { cmd ->
-                                    AnimationListItem(
-                                        command = cmd,
-                                        isSelected = selectedCommands.contains(cmd),
-                                        onSelect = {
-                                            selectedCommands = if (selectedCommands.contains(it)) {
-                                                if (selectedCommands.size > 1) selectedCommands - it else selectedCommands
-                                            } else {
-                                                selectedCommands + it
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                            RemoteType.REMOTE_3 -> {
-                                IntensitySlider(
-                                    value = sliderValue,
-                                    onValueChange = { sliderValue = it },
-                                    accentColor = activeCommand.color
-                                )
-                            }
-                        }
-                    }
-                    item { Spacer(Modifier.height(16.dp)) }
                 }
             }
         }
@@ -496,100 +477,65 @@ fun CompactStatusCard(
     companyId: Int,
     dataHex: String
 ) {
-    val containerColor = if (isAdvertising) {
-        accentColor.copy(alpha = 0.12f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // ❌ no shadow
+    GlassCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            // 🔘 Flat Status Indicator
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isAdvertising)
-                            accentColor.copy(alpha = 0.2f)
-                        else
-                            MaterialTheme.colorScheme.surface
-                    ),
-                contentAlignment = Alignment.Center
+            GlassInsetBox(
+                modifier = Modifier.size(48.dp),
+                cornerShape = CircleShape
             ) {
                 if (isAdvertising) {
                     CircularProgressIndicator(
                         color = accentColor,
                         strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 } else {
                     Icon(
                         Icons.Default.BluetoothDisabled,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(18.dp)
+                        tint = TextSecondary.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // 📄 Text Block
             Column(modifier = Modifier.weight(1f)) {
-
                 Text(
                     text = if (isAdvertising) commandName else "Disconnected",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
                     maxLines = 1
                 )
 
                 Text(
                     text = if (isAdvertising) "Transmitting" else "Inactive",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = if (isAdvertising) accentColor else TextSecondary
                 )
             }
 
-            // ⏱ Right Info
             Column(horizontalAlignment = Alignment.End) {
-
                 Text(
                     text = if (isAdvertising) time else "--:--",
                     style = MaterialTheme.typography.titleMedium,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = if (isAdvertising)
-                        "0x${companyId.toString(16).padStart(4, '0').uppercase()}"
-                    else "—",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = TextPrimary
                 )
 
                 Text(
-                    text = if (isAdvertising)
-                        dataHex
-                    else "—",
+                    text = if (isAdvertising) "0x${companyId.toString(16).padStart(4, '0').uppercase()}" else "—",
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = TextSecondary
                 )
             }
         }
@@ -626,22 +572,32 @@ fun ColorSwatch(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
-            .border(2.dp, if (isSelected) command.color else Color.Transparent, RoundedCornerShape(16.dp))
-            .background(command.color.copy(alpha = 0.15f))
+            .padding(4.dp)
             .clickable { onSelect(command) },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(command.color)
-                    .shadow(if (isSelected) 8.dp else 0.dp, CircleShape)
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(cmdDisplayName(command.displayName), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        GlassInsetBox(
+            modifier = Modifier.fillMaxSize(),
+            cornerShape = RoundedCornerShape(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(command.color)
+                        .then(
+                            if (isSelected) Modifier.border(2.dp, Color.White, CircleShape) else Modifier
+                        )
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = cmdDisplayName(command.displayName),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                    color = if (isSelected) Color.White else TextSecondary
+                )
+            }
         }
     }
 }
@@ -654,27 +610,44 @@ fun AnimationListItem(
     isSelected: Boolean,
     onSelect: (LEDCommand) -> Unit
 ) {
-    OutlinedCard(
-        onClick = { onSelect(command) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        border = CardDefaults.outlinedCardBorder(isSelected).copy(
-            width = if (isSelected) 2.dp else 1.dp
-        ),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = if (isSelected) command.color.copy(alpha = 0.05f) else Color.Transparent
-        )
+    GlassCard(
+        modifier = Modifier.fillMaxWidth().clickable { onSelect(command) }
     ) {
-        ListItem(
-            headlineContent = { Text(command.displayName, fontWeight = FontWeight.Bold) },
-            supportingContent = { Text(command.description) },
-            leadingContent = {
-                Box(Modifier.size(12.dp).clip(CircleShape).background(command.color))
-            },
-            trailingContent = {
-                RadioButton(selected = isSelected, onClick = { onSelect(command) })
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            GlassInsetBox(
+                modifier = Modifier.size(48.dp),
+                cornerShape = CircleShape
+            ) {
+                Box(
+                    modifier = Modifier.size(24.dp).clip(CircleShape).background(command.color)
+                )
             }
-        )
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = command.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = command.description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
+            }
+
+            RadioButton(
+                selected = isSelected,
+                onClick = { onSelect(command) },
+                colors = RadioButtonDefaults.colors(selectedColor = MintGreenAccent)
+            )
+        }
     }
 }
 
@@ -692,72 +665,42 @@ fun DiscoControlCard(
     val discoColor1 = Color(0xFFFF00FF)
     val discoColor2 = Color(0xFF00FFFF)
 
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = if (isEnabled) Color(0xFF121212) else MaterialTheme.colorScheme.surface
-        )
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red))
-                        )
-                        .padding(2.dp)
-                ) {
-                    Box(Modifier.fillMaxSize().clip(CircleShape).background(if (isEnabled) Color.Black else Color.White), contentAlignment = Alignment.Center) {
-                        Icon(
-                            if (isEnabled) Icons.Default.FlashOn else Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = if (isEnabled) Color.White else Color.Black,
-                            modifier = Modifier.size(24.dp)
-                        )
+                GlassInsetBox(modifier = Modifier.size(52.dp), cornerShape = CircleShape) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)))
+                            .padding(2.dp)
+                    ) {
+                        Box(Modifier.fillMaxSize().clip(CircleShape).background(if (isEnabled) Color.Black else Color.White), contentAlignment = Alignment.Center) {
+                            Icon(if (isEnabled) Icons.Default.FlashOn else Icons.Default.MusicNote, null, tint = if (isEnabled) Color.White else Color.Black, modifier = Modifier.size(24.dp))
+                        }
                     }
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Disco Vibes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = if (isEnabled) Color.White else Color.Black)
-                    Text(if (isEnabled) "INSANE VIBES ACTIVE" else "Party light show", style = MaterialTheme.typography.labelSmall, color = if (isEnabled) discoColor2 else Color.Gray)
+                    Text("Disco Vibes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(if (isEnabled) "INSANE VIBES ACTIVE" else "Party light show", style = MaterialTheme.typography.labelSmall, color = if (isEnabled) discoColor2 else TextSecondary)
                 }
-                Switch(
-                    checked = isEnabled,
-                    onCheckedChange = onToggle,
-                    colors = SwitchDefaults.colors(checkedThumbColor = discoColor2)
-                )
+                Switch(checked = isEnabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedThumbColor = discoColor2))
             }
 
             if (isEnabled) {
                 Spacer(Modifier.height(24.dp))
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Strobe Flashes", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                    Text("Strobe Flashes", style = MaterialTheme.typography.labelMedium, color = TextPrimary)
                     Spacer(Modifier.weight(1f))
                     Switch(checked = isStrobe, onCheckedChange = onStrobeToggle, colors = SwitchDefaults.colors(checkedThumbColor = discoColor1))
                 }
-
                 Spacer(Modifier.height(16.dp))
-
-                Text("Vibe Speed", style = MaterialTheme.typography.labelMedium, color = Color.White)
-                Slider(
-                    value = (1100L - speed).toFloat(),
-                    onValueChange = { onSpeedChange(1100L - it.toLong()) },
-                    valueRange = 100f..1050f, // 50ms to 1000ms
-                    colors = SliderDefaults.colors(thumbColor = discoColor1, activeTrackColor = discoColor1)
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Chill", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    Text("INSANE SPEED", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                }
-
+                Text("Vibe Speed", style = MaterialTheme.typography.labelMedium, color = TextPrimary)
+                Slider(value = (1100L - speed).toFloat(), onValueChange = { onSpeedChange(1100L - it.toLong()) }, valueRange = 100f..1050f, colors = SliderDefaults.colors(thumbColor = discoColor1, activeTrackColor = discoColor1))
                 Spacer(Modifier.height(16.dp))
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Shuffle Mode", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                    Text("Shuffle Mode", style = MaterialTheme.typography.labelMedium, color = TextPrimary)
                     Spacer(Modifier.weight(1f))
                     Checkbox(checked = isRandom, onCheckedChange = onRandomToggle, colors = CheckboxDefaults.colors(checkedColor = discoColor2))
                 }
@@ -767,117 +710,37 @@ fun DiscoControlCard(
 }
 
 @Composable
-fun CycleIntervalControl(
-    interval: Int,
-    onIntervalChange: (Int) -> Unit,
-    accentColor: Color
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+fun CycleIntervalControl(interval: Int, onIntervalChange: (Int) -> Unit, accentColor: Color) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Timer, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Cycle Speed", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(text = "Automatic Transition", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Spacer(Modifier.weight(1f))
-                Surface(
-                    color = accentColor.copy(alpha = 0.1f),
-                    shape = CircleShape
-                ) {
-                    Text(
-                        "${interval}s",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = accentColor
-                    )
+                GlassInsetBox(cornerShape = RoundedCornerShape(12.dp)) {
+                    Text(text = "${interval}s Delay", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = accentColor, fontWeight = FontWeight.Bold)
                 }
             }
-            Slider(
-                value = interval.toFloat(),
-                onValueChange = { onIntervalChange(it.toInt()) },
-                valueRange = 1f..5f,
-                steps = 3,
-                colors = SliderDefaults.colors(
-                    thumbColor = accentColor,
-                    activeTrackColor = accentColor
-                )
-            )
-            Text(
-                "Change color every $interval seconds automatically.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(Modifier.height(16.dp))
+            Slider(value = interval.toFloat(), onValueChange = { onIntervalChange(it.toInt()) }, valueRange = 1f..5f, steps = 3, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = accentColor, inactiveTrackColor = accentColor.copy(alpha = 0.2f)))
+            Text(text = "Transition to the next color state every $interval seconds.", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
         }
     }
 }
 
 @Composable
-fun IntensitySlider(
-    value: Int,
-    onValueChange: (Int) -> Unit,
-    accentColor: Color
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp)
-    ) {
+fun IntensitySlider(value: Int, onValueChange: (Int) -> Unit, accentColor: Color) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Intensity Control", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Surface(
-                    color = accentColor.copy(alpha = 0.2f),
-                    shape = CircleShape
-                ) {
-                    Text(
-                        text = "$value / 255",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Black,
-                        color = accentColor
-                    )
+                Text(text = "Luminance Control", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                GlassInsetBox(cornerShape = RoundedCornerShape(12.dp)) {
+                    Text(text = "Level $value", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = accentColor)
                 }
             }
-
-            Spacer(Modifier.height(18.dp))
-
-            // 🌈 Full Spectrum Rainbow Track
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)
-                        )
-                    )
-            )
-
-            Slider(
-                value = value.toFloat(),
-                onValueChange = { onValueChange(it.toInt()) },
-                valueRange = 0f..255f,
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = Color.Transparent,
-                    inactiveTrackColor = Color.Transparent
-                ),
-                modifier = Modifier.offset(y = (-16).dp) // Overlay on gradient
-            )
-
-            Text(
-                "Manufacturer Data: 0xCC ${value.toString(16).padStart(2,'0').uppercase()}",
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.padding(top = 4.dp)
-            )
+            Spacer(Modifier.height(24.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red))))
+            Slider(value = value.toFloat(), onValueChange = { onValueChange(it.toInt()) }, valueRange = 0f..255f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.Transparent, inactiveTrackColor = Color.Transparent), modifier = Modifier.offset(y = (-17).dp))
+            Text(text = "Command: 0xCC [${value.toString(16).padStart(2,'0').uppercase()}]", style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = TextSecondary.copy(alpha = 0.6f))
         }
     }
 }
@@ -885,40 +748,23 @@ fun IntensitySlider(
 @Composable
 fun EnhancedHistorySection(history: List<AdvertisingHistory>) {
     Column {
-        Text(
-            "Recent Commands",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        OutlinedCard(
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Text(text = "Telemetry Command Logs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.padding(bottom = 16.dp))
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column {
-                history.take(4).forEachIndexed { index, entry ->
-                    ListItem(
-                        headlineContent = { Text(entry.label, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
-                        supportingContent = {
-                            Text(
-                                "Comp: 0x${entry.companyId.toString(16).padStart(4,'0').uppercase()} • Data: 0x${entry.dataHex}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        },
-                        trailingContent = {
-                            Text(
-                                SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(entry.timestamp)),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        leadingContent = {
-                            Box(Modifier.size(10.dp).clip(CircleShape).background(entry.remoteType.color))
+                history.take(5).forEachIndexed { index, entry ->
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        GlassInsetBox(modifier = Modifier.size(40.dp), cornerShape = CircleShape) {
+                            Box(Modifier.size(16.dp).clip(CircleShape).background(entry.remoteType.color))
                         }
-                    )
-                    if (index < history.take(4).size - 1) {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = entry.label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text(text = "ID: 0x${entry.companyId.toString(16).uppercase()} • Raw: 0x${entry.dataHex}", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                        }
+                        Text(text = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(entry.timestamp)), style = MaterialTheme.typography.labelSmall, color = TextSecondary, fontFamily = FontFamily.Monospace)
+                    }
+                    if (index < history.take(5).size - 1) {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = TextSecondary.copy(alpha = 0.1f))
                     }
                 }
             }
@@ -952,12 +798,7 @@ fun PermissionsWarningCard() {
     }
 }
 
-private fun startAdvertising(
-    advertiser: BluetoothLeAdvertiser?,
-    callback: AdvertiseCallback,
-    remote: RemoteType,
-    command: LEDCommand
-) {
+private fun startAdvertising(advertiser: BluetoothLeAdvertiser?, callback: AdvertiseCallback, remote: RemoteType, command: LEDCommand) {
     try {
         if (advertiser == null) return
         val companyId = command.companyId
@@ -967,11 +808,7 @@ private fun startAdvertising(
     catch (e: Exception)          { e.printStackTrace() }
 }
 
-private fun sendSliderCommand(
-    advertiser: BluetoothLeAdvertiser?,
-    callback: AdvertiseCallback,
-    sliderValue: Int
-) {
+private fun sendSliderCommand(advertiser: BluetoothLeAdvertiser?, callback: AdvertiseCallback, sliderValue: Int) {
     try {
         if (advertiser == null) return
         val companyId = 0x0001
@@ -1001,10 +838,7 @@ private fun buildAdvData(companyId: Int, data: ByteArray): AdvertiseData =
         .addManufacturerData(companyId, data)
         .build()
 
-private fun createAdvertiseCallback(
-    onSuccess: () -> Unit,
-    onFailure: () -> Unit
-): AdvertiseCallback = object : AdvertiseCallback() {
+private fun createAdvertiseCallback(onSuccess: () -> Unit, onFailure: () -> Unit): AdvertiseCallback = object : AdvertiseCallback() {
     override fun onStartSuccess(settingsInEffect: AdvertiseSettings) { super.onStartSuccess(settingsInEffect); onSuccess() }
     override fun onStartFailure(errorCode: Int)                      { super.onStartFailure(errorCode);        onFailure() }
 }
@@ -1018,13 +852,7 @@ private fun getAdvertisingPermissions(): Array<String> =
     else
         arrayOf(Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.ACCESS_FINE_LOCATION)
 
-private fun addToHistory(
-    history: MutableList<AdvertisingHistory>,
-    label: String,
-    remoteType: RemoteType,
-    companyId: Int,
-    dataHex: String
-) {
+private fun addToHistory(history: MutableList<AdvertisingHistory>, label: String, remoteType: RemoteType, companyId: Int, dataHex: String) {
     history.add(0, AdvertisingHistory(label, System.currentTimeMillis(), remoteType, companyId, dataHex))
     if (history.size > 10) history.removeAt(history.lastIndex)
 }

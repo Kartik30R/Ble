@@ -12,12 +12,12 @@
         "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-main-81:\\drawable\\home.png"
     },
     {
-        "merged": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-debug-79:\\drawable_ic_thermometer.png.flat",
-        "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-main-81:\\drawable\\ic_thermometer.png"
-    },
-    {
         "merged": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-debug-79:\\drawable_logofinallast.png.flat",
         "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-main-81:\\drawable\\logofinallast.png"
+    },
+    {
+        "merged": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-debug-79:\\drawable_ic_thermometer.png.flat",
+        "source": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-main-81:\\drawable\\ic_thermometer.png"
     },
     {
         "merged": "C:\\Users\\hp\\AppData\\Local\\Android\\Sdk\\daemon\\8.13\\com.blesense.app-debug-79:\\drawable_jack.png.flat",

@@ -25,5 +25,5 @@ object Routes {
         "chart_screen_2/{title}/{value}"
 
 
-    const val ip="172.26.79.199:8080"
+    const val ip="172.26.78.199:8080"
 }
